@@ -15,6 +15,9 @@ func getTextMessage(content []hu60.MsgContent) (text string) {
 		if c.Type == "text" {
 			text += *c.Value
 		}
+		if c.Type == "mdcode" {
+			text += *c.Data
+		}
 	}
 	text = strings.Trim(text, " ")
 	text = strings.Trim(text, "，")

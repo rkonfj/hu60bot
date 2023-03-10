@@ -77,7 +77,7 @@ func listen(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	logrus.Info("your sid is ", resp.Sid, ", conversation window is ", conversationWindowStr, ", watching for chat now")
+	logrus.Info("sid is ", resp.Sid, ", conversation window is ", conversationWindowStr, ", watching for chat now")
 
 	client.WatchMsg(context.Background(), resp.Sid, func(msg hu60.Msg) {
 		logrus.Debug("watched msg: ", msg)

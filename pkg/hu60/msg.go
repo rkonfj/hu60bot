@@ -28,6 +28,7 @@ type MsgUnit struct {
 	Type  string
 	Value *string
 	Data  *string
+	Tag   *string
 }
 
 type ListMsgResponse struct {

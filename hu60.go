@@ -11,12 +11,20 @@ import (
 )
 
 func getTextMessage(content []hu60.MsgContent) (text string) {
+	missingClosingTags := make(map[string]struct{})
 	for _, c := range content[0].MsgUnit {
-		if c.Type == "text" {
+		if c.Type == "text" && len(missingClosingTags) == 0 {
 			text += *c.Value
 		}
 		if c.Type == "mdcode" {
 			text += *c.Data
+		}
+		if c.Type == "style" {
+			if strings.HasPrefix(*c.Tag, "/") {
+				delete(missingClosingTags, *c.Tag)
+			} else {
+				missingClosingTags[fmt.Sprintf("/%s", *c.Tag)] = struct{}{}
+			}
 		}
 	}
 	text = strings.Trim(text, " ")

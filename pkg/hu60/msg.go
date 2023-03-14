@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Msg struct {
@@ -51,8 +53,11 @@ func (c *Client) WatchMsg(ctx context.Context, sid string, handler func(msg Msg)
 		time.Sleep(10 * time.Second)
 		resp, err := c.ListMsg(ctx, sid)
 		if err != nil {
-			fmt.Println("[ERR]", err.Error())
+			logrus.Error(err.Error())
 			continue
+		}
+		for i, j := 0, len(resp.MsgList)-1; i < j; i, j = i+1, j-1 {
+			resp.MsgList[i], resp.MsgList[j] = resp.MsgList[j], resp.MsgList[i]
 		}
 		for _, msg := range resp.MsgList {
 			handler(msg)

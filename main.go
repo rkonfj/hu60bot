@@ -37,7 +37,7 @@ func main() {
 	}
 
 	cmd.Flags().StringVar(&conversationWindowStr, "conversation-window", "30m", "conversation valid time. example: 1m, 1h, 1d ...")
-	cmd.Flags().StringVar(&logLevel, "log-level", "info", "logging component's log level. example: error, warn, info, debug ...")
+	cmd.Flags().StringVar(&logLevel, "log-level", "info", "logging level. example: error, warn, info, debug ...")
 	cmd.Flags().StringVarP(&username, "hu60user", "u", "", "robot username for login hu60wap6")
 	cmd.Flags().StringVarP(&password, "hu60pass", "p", "", "robot password for login hu60wap6")
 	cmd.Flags().StringVar(&hu60ApiURL, "hu60api", "https://hu60.cn", "hu60wap6's API URL")
@@ -54,14 +54,14 @@ func programInit(cmd *cobra.Command, args []string) {
 	if conversationWindowDuration, err := time.ParseDuration(conversationWindowStr); err == nil {
 		conversationWindow = conversationWindowDuration
 	} else {
-		panic(err)
+		logrus.Fatal(err)
 	}
 	ll, err := logrus.ParseLevel(logLevel)
 	if err != nil {
-		panic(err)
+		logrus.Fatal(err)
 	}
 	logrus.SetLevel(ll)
-	logrus.SetFormatter(&logrus.TextFormatter{})
+	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
 	logrus.Debug("you can see debug level log now")
 	updateConversationStats()
 }
@@ -74,7 +74,7 @@ func listen(cmd *cobra.Command, args []string) {
 		hu60.LoginRequest{Username: username, Password: password},
 	)
 	if err != nil {
-		panic(err)
+		logrus.Fatal(err)
 	}
 
 	logrus.Info("sid is ", resp.Sid, ", conversation window is ", conversationWindowStr, ", watching for chat now")

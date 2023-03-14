@@ -13,6 +13,6 @@ Flags:
       --hu60api string               hu60wap6's API URL (default "https://hu60.cn")
   -p, --hu60pass string              robot password for login hu60wap6
   -u, --hu60user string              robot username for login hu60wap6
-      --log-level string             logging component's log level. example: error, warn, info, debug ... (default "info")
+      --log-level string             logging level. example: error, warn, info, debug ... (default "info")
       --openai-token string          token for access OpenAI's API
 ```

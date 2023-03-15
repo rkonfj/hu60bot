@@ -1,141 +1,87 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"os"
-	"strings"
 	"time"
 
-	cache "github.com/go-pkgz/expirable-cache/v2"
-	"github.com/rkonfj/hu60bot/pkg/hu60"
+	"github.com/rkonfj/hu60bot/convo"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-
-	openai "github.com/sashabaranov/go-openai"
-)
-
-var (
-	username              string
-	password              string
-	hu60ApiURL            string
-	openAIToken           string
-	conversationWindowStr string
-	conversationWindow    time.Duration
-	conversationContext   cache.Cache[string, []openai.ChatCompletionMessage] = cache.NewCache[string, []openai.ChatCompletionMessage]().
-				WithMaxKeys(4096).WithTTL(time.Second * 30)
-	logLevel string
 )
 
 func main() {
-	var cmd = &cobra.Command{
-		Use:    "hu60bot",
-		Short:  "A hu60wap6 robot",
-		Args:   cobra.NoArgs,
-		PreRun: programInit,
-		Run:    listen,
+	cmd := &cobra.Command{
+		Use:     "hu60bot",
+		Short:   "A hu60wap6 robot",
+		Args:    cobra.NoArgs,
+		PreRunE: botInit,
+		RunE:    botAction,
 	}
-
-	cmd.Flags().StringVar(&conversationWindowStr, "conversation-window", "30m", "conversation valid time. example: 1m, 1h, 1d ...")
-	cmd.Flags().StringVar(&logLevel, "log-level", "info", "logging level. example: error, warn, info, debug ...")
-	cmd.Flags().StringVarP(&username, "hu60user", "u", "", "robot username for login hu60wap6")
-	cmd.Flags().StringVarP(&password, "hu60pass", "p", "", "robot password for login hu60wap6")
-	cmd.Flags().StringVar(&hu60ApiURL, "hu60api", "https://hu60.cn", "hu60wap6's API URL")
-	cmd.Flags().StringVar(&openAIToken, "openai-token", "", "token for access OpenAI's API")
+	cmd.Flags().String("conversation-window", "30m", "conversation valid time. example: 1m, 1h, 1d ...")
+	cmd.Flags().String("log-level", "info", "logging level. example: error, warn, info, debug ...")
+	cmd.Flags().String("hu60api", "https://hu60.cn", "hu60wap6's API URL")
+	cmd.Flags().String("openai-token", "", "token for access OpenAI's API")
+	cmd.Flags().StringP("hu60user", "u", "", "robot username for login hu60wap6")
+	cmd.Flags().StringP("hu60pass", "p", "", "robot password for login hu60wap6")
 
 	cmd.MarkFlagRequired("hu60user")
 	cmd.MarkFlagRequired("hu60pass")
 	cmd.MarkFlagRequired("openai-token")
 
 	cmd.Execute()
+
 }
 
-func programInit(cmd *cobra.Command, args []string) {
-	if conversationWindowDuration, err := time.ParseDuration(conversationWindowStr); err == nil {
-		conversationWindow = conversationWindowDuration
-	} else {
-		logrus.Fatal(err)
+func botInit(cmd *cobra.Command, args []string) error {
+	logLevel, err := cmd.Flags().GetString("log-level")
+	if err != nil {
+		return err
 	}
 	ll, err := logrus.ParseLevel(logLevel)
 	if err != nil {
-		logrus.Fatal(err)
+		return err
 	}
 	logrus.SetLevel(ll)
 	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
 	logrus.Debug("you can see debug level log now")
-	updateConversationStats()
+	return nil
 }
 
-func listen(cmd *cobra.Command, args []string) {
-	client := hu60.NewClient(hu60ApiURL)
-	openAIClient := openai.NewClient(openAIToken)
-	resp, err := client.Login(
-		context.Background(),
-		hu60.LoginRequest{Username: username, Password: password},
-	)
+func processConversationOptions(cmd *cobra.Command) (options convo.ConversationOptions, err error) {
+	conversationWindowStr, err := cmd.Flags().GetString("conversation-window")
 	if err != nil {
-		logrus.Fatal(err)
+		return
 	}
 
-	logrus.Info("sid is ", resp.Sid, ", conversation window is ", conversationWindowStr, ", watching for chat now")
+	if conversationWindowDuration, err := time.ParseDuration(conversationWindowStr); err != nil {
+		return options, err
+	} else {
+		options.ConversationWindow = conversationWindowDuration
+	}
 
-	client.WatchMsg(context.Background(), resp.Sid, func(msg hu60.Msg) {
-		logrus.Debug("watched msg: ", msg)
-		if msg.Content[0].Type != "atMsg" {
-			logrus.Warn("skip non @ msg")
-			return
-		}
-		conversationKey := fmt.Sprintf("%d", msg.ByUID)
+	options.Hu60APIURL, err = cmd.Flags().GetString("hu60api")
+	if err != nil {
+		return
+	}
 
-		var (
-			conversationMsgs []openai.ChatCompletionMessage
-			newConversation  bool
-		)
-		if msgs, ok := conversationContext.Get(conversationKey); ok {
-			conversationMsgs = msgs
-		} else {
-			newConversation = true
-			conversationMsgs = []openai.ChatCompletionMessage{}
-		}
+	options.OpenaiToken, err = cmd.Flags().GetString("openai-token")
+	if err != nil {
+		return
+	}
 
-		content := getTextMessage(msg.Content)
-		logrus.Debug("getTextMessage: ", content)
-
-		openaiMsg := openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleUser,
-			Content: content,
-		}
-
-		conversationMsgs = append(conversationMsgs, openaiMsg)
-
-		responseText, err := askAI(openAIClient, conversationMsgs)
-		if err != nil {
-			logrus.Error("askAI error: ", err.Error())
-			answerHu60(client, resp.Sid, msg, err.Error(), newConversation)
-			return
-		}
-
-		logrus.Debug("askAI response: ", responseText)
-
-		conversationMsgs = append(conversationMsgs, openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleAssistant,
-			Content: responseText,
-		})
-
-		conversationContext.Set(conversationKey, conversationMsgs, conversationWindow)
-		answerHu60(client, resp.Sid, msg, responseText, newConversation)
-		updateConversationStats()
-	})
-
+	options.Hu60Username, err = cmd.Flags().GetString("hu60user")
+	if err != nil {
+		return
+	}
+	options.Hu60Password, err = cmd.Flags().GetString("hu60pass")
+	return
 }
 
-func updateConversationStats() {
-	stats := fmt.Sprintf(`Total Conversation: %d, Invalid Conversation: %d`, conversationContext.Stat().Added, conversationContext.Stat().Evicted)
-	stats += "\n\n"
-	stats += strings.Join(conversationContext.Keys(), "\n")
-	stats += "\n"
-	err := os.WriteFile("conversation.stat.txt", []byte(stats), 0644)
+func botAction(cmd *cobra.Command, args []string) error {
+	convoOpts, err := processConversationOptions(cmd)
 	if err != nil {
-		logrus.Error("update ConversationStats error: ", err.Error())
+		return err
 	}
+	conversationManager := convo.NewConversationManager(convoOpts)
+	conversationManager.Run()
+	return nil
 }

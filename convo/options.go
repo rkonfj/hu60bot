@@ -7,5 +7,6 @@ type ConversationOptions struct {
 	Hu60Password       string
 	Hu60APIURL         string
 	OpenaiToken        string
+	OpenaiModel        string
 	ConversationWindow time.Duration
 }

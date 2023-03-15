@@ -79,7 +79,7 @@ func (cm *ConversationManager) Ask(words, conversationKey string) (answer string
 		Content: words,
 	})
 
-	answer, err = askAI(cm.openaiClient, conversationMsgs)
+	answer, err = askAI(cm.openaiClient, cm.options.OpenaiModel, conversationMsgs)
 	if err != nil {
 		return
 	}

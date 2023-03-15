@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/rkonfj/hu60bot/convo"
+	"github.com/sashabaranov/go-openai"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -19,7 +20,8 @@ func main() {
 	cmd.Flags().String("conversation-window", "30m", "conversation valid time. example: 1m, 1h, 1d ...")
 	cmd.Flags().String("log-level", "info", "logging level. example: error, warn, info, debug ...")
 	cmd.Flags().String("hu60api", "https://hu60.cn", "hu60wap6's API URL")
-	cmd.Flags().String("openai-token", "", "token for access OpenAI's API")
+	cmd.Flags().String("openai-token", "", "api key for access openai. https://platform.openai.com/account/api-keys")
+	cmd.Flags().String("openai-model", openai.GPT3Dot5Turbo, "id of the openai model to use. https://platform.openai.com/docs/models/overview")
 	cmd.Flags().StringP("hu60user", "u", "", "robot username for login hu60wap6")
 	cmd.Flags().StringP("hu60pass", "p", "", "robot password for login hu60wap6")
 
@@ -64,6 +66,11 @@ func processConversationOptions(cmd *cobra.Command) (options convo.ConversationO
 	}
 
 	options.OpenaiToken, err = cmd.Flags().GetString("openai-token")
+	if err != nil {
+		return
+	}
+
+	options.OpenaiModel, err = cmd.Flags().GetString("openai-model")
 	if err != nil {
 		return
 	}

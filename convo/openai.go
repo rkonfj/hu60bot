@@ -7,11 +7,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func askAI(client *openai.Client, msgs []openai.ChatCompletionMessage) (string, error) {
+func askAI(client *openai.Client, model string, msgs []openai.ChatCompletionMessage) (string, error) {
 	resp, err := client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
-			Model:    openai.GPT3Dot5Turbo,
+			Model:    model,
 			Messages: msgs,
 		},
 	)

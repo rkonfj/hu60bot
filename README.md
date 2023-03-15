@@ -14,5 +14,6 @@ Flags:
   -p, --hu60pass string              robot password for login hu60wap6
   -u, --hu60user string              robot username for login hu60wap6
       --log-level string             logging level. example: error, warn, info, debug ... (default "info")
-      --openai-token string          token for access OpenAI's API
+      --openai-model string          id of the openai model to use. https://platform.openai.com/docs/models/overview (default "gpt-3.5-turbo")
+      --openai-token string          api key for access openai. https://platform.openai.com/account/api-keys
 ```

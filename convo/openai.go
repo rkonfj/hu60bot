@@ -18,6 +18,7 @@ func askAI(client *openai.Client, model string, msgs []openai.ChatCompletionMess
 	)
 
 	if err != nil {
+		logrus.Warn("first request openai error: ", err.Error())
 		if e, ok := err.(*openai.RequestError); ok && e.StatusCode == 429 {
 			resp, err = client.CreateChatCompletion(
 				context.Background(),

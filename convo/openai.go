@@ -2,6 +2,7 @@ package convo
 
 import (
 	"context"
+	"time"
 
 	openai "github.com/sashabaranov/go-openai"
 	"github.com/sirupsen/logrus"
@@ -16,6 +17,27 @@ func askAI(client *openai.Client, model string, msgs []openai.ChatCompletionMess
 		},
 	)
 
+	if err != nil {
+		if e, ok := err.(*openai.RequestError); ok && e.StatusCode == 429 {
+			resp, err = client.CreateChatCompletion(
+				context.Background(),
+				openai.ChatCompletionRequest{
+					Model:    openai.GPT3Ada,
+					Messages: msgs,
+				},
+			)
+			if err != nil {
+				time.Sleep(2 * time.Second)
+				resp, err = client.CreateChatCompletion(
+					context.Background(),
+					openai.ChatCompletionRequest{
+						Model:    model,
+						Messages: msgs,
+					},
+				)
+			}
+		}
+	}
 	if err != nil {
 		return "", err
 	}

@@ -18,6 +18,7 @@ type ConversationManager struct {
 	openaiClient        *openai.Client
 	options             ConversationOptions
 	conversationContext cache.Cache[string, []openai.ChatCompletionMessage]
+	openaiTokensUsage   openai.Usage
 }
 
 func NewConversationManager(options ConversationOptions) *ConversationManager {
@@ -79,7 +80,7 @@ func (cm *ConversationManager) Ask(words, conversationKey string) (answer string
 		Content: words,
 	})
 
-	answer, err = askAI(cm.openaiClient, cm.options.OpenaiModel, conversationMsgs)
+	answer, usage, err := askAI(cm.openaiClient, cm.options.OpenaiModel, conversationMsgs)
 	if err != nil {
 		return
 	}
@@ -91,12 +92,18 @@ func (cm *ConversationManager) Ask(words, conversationKey string) (answer string
 	})
 
 	cm.conversationContext.Set(conversationKey, conversationMsgs, cm.options.ConversationWindow)
+	cm.openaiTokensUsage.PromptTokens += usage.PromptTokens
+	cm.openaiTokensUsage.CompletionTokens += usage.CompletionTokens
+	cm.openaiTokensUsage.TotalTokens += usage.TotalTokens
 	cm.updateConversationStats()
 	return
 }
 
 func (cm *ConversationManager) updateConversationStats() {
-	stats := fmt.Sprintf(`Total Conversation: %d, Invalid Conversation: %d`, cm.conversationContext.Stat().Added, cm.conversationContext.Stat().Evicted)
+	stats := fmt.Sprintf(`conversation: %d/%d, openai tokens usage: %d/%d/%d`,
+		cm.conversationContext.Stat().Added, cm.conversationContext.Stat().Evicted,
+		cm.openaiTokensUsage.PromptTokens, cm.openaiTokensUsage.CompletionTokens, cm.openaiTokensUsage.TotalTokens)
+	logrus.Debug(stats)
 	stats += "\n\n"
 	stats += strings.Join(cm.conversationContext.Keys(), "\n")
 	stats += "\n"

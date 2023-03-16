@@ -44,7 +44,6 @@ func botInit(cmd *cobra.Command, args []string) error {
 	}
 	logrus.SetLevel(ll)
 	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
-	logrus.Debug("you can see debug level log now")
 	return nil
 }
 

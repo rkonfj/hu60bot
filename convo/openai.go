@@ -8,7 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func askAI(client *openai.Client, model string, msgs []openai.ChatCompletionMessage) (string, error) {
+func askAI(client *openai.Client, model string, msgs []openai.ChatCompletionMessage) (string, openai.Usage, error) {
 	resp, err := client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
@@ -40,8 +40,7 @@ func askAI(client *openai.Client, model string, msgs []openai.ChatCompletionMess
 		}
 	}
 	if err != nil {
-		return "", err
+		return "", openai.Usage{}, err
 	}
-	logrus.Debugf("openai usage: %d/%d/%d", resp.Usage.PromptTokens, resp.Usage.CompletionTokens, resp.Usage.TotalTokens)
-	return resp.Choices[0].Message.Content, nil
+	return resp.Choices[0].Message.Content, resp.Usage, nil
 }

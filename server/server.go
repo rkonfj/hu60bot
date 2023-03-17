@@ -70,7 +70,7 @@ func (m *WebsocketManager) Push(msg *Hu60Msg) error {
 	}
 }
 
-func (m *WebsocketManager) Run() {
+func (m *WebsocketManager) Run() error {
 	http.HandleFunc("/v1/ws", func(w http.ResponseWriter, r *http.Request) {
 		ws, err := m.upgrader.Upgrade(w, r, nil)
 		if err != nil {
@@ -118,11 +118,8 @@ func (m *WebsocketManager) Run() {
 			}
 		}(res, ws)
 	})
-	logrus.Info("bot listening on ", m.options.Listen, " for interact")
-	err := http.ListenAndServe(m.options.Listen, nil)
-	if err != nil {
-		logrus.Fatal(err)
-	}
+	logrus.Info("bot listening on ", m.options.Listen, " for interact now. websocket endpoint is /v1/ws")
+	return http.ListenAndServe(m.options.Listen, nil)
 }
 
 func (m *WebsocketManager) responseUnauthenticated(ws *websocket.Conn) {

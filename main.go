@@ -137,13 +137,19 @@ func botAction(cmd *cobra.Command, args []string) error {
 
 	websocketManager := server.NewWebsocketManager(serverOpts, conversationManager)
 	go func() {
-		websocketManager.Run()
+		err := websocketManager.Run()
+		if err != nil {
+			logrus.Infof("websocket server is disabled. (%s)", err.Error())
+		}
 		wg.Done()
 	}()
 
 	canalManager := server.NewCanalManager(canalOpts, websocketManager)
 	go func() {
-		canalManager.Run()
+		err := canalManager.Run()
+		if err != nil {
+			logrus.Infof("canal is disabled. (%s)", err.Error())
+		}
 		wg.Done()
 	}()
 	wg.Wait()

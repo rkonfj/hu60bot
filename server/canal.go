@@ -22,14 +22,14 @@ func NewCanalManager(opts CanalOptions, wsm *WebsocketManager) *CanalManager {
 	}
 }
 
-func (m *CanalManager) Run() {
+func (m *CanalManager) Run() error {
 	err := m.connector.Connect()
 	if err != nil {
-		logrus.Fatal(err)
+		return err
 	}
 	err = m.connector.Subscribe("hu60\\.hu60_msg")
 	if err != nil {
-		logrus.Fatal(err)
+		return err
 	}
 	logrus.Info("bot watching db event now")
 	for {

@@ -42,7 +42,7 @@ func (cm *ConversationManager) Run() {
 		logrus.Fatal(err)
 	}
 
-	logrus.Info("sid is ", resp.Sid, ", conversation window is ", cm.options.ConversationWindow.String(), ", watching for chat now")
+	logrus.Info("bot watching for chat now. sid is ", resp.Sid, ", conversation window is ", cm.options.ConversationWindow.String())
 
 	cm.hu60Client.WatchMsg(context.Background(), resp.Sid, func(msg hu60.Msg) {
 		logrus.Debug("watched msg: ", msg)

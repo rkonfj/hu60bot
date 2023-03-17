@@ -26,7 +26,7 @@ func main() {
 	cmd.Flags().String("openai-model", openai.GPT3Dot5Turbo, "id of the openai model to use. https://platform.openai.com/docs/models/overview")
 	cmd.Flags().String("canal-host", "127.0.0.1", "canal host for watching hu60wap6 db")
 	cmd.Flags().Int("canal-port", 11111, "canal port for watching hu60wap6 db")
-	cmd.Flags().String("canal-client-destination", "example", "canal client destination for watching hu60wap6 db")
+	cmd.Flags().String("canal-client-destination", "hu60bot", "canal client destination for watching hu60wap6 db")
 
 	cmd.Flags().StringP("hu60user", "u", "", "robot username for login hu60wap6")
 	cmd.Flags().StringP("hu60pass", "p", "", "robot password for login hu60wap6")

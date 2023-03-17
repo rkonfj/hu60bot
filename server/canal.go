@@ -64,7 +64,7 @@ func processHu60Msg(entries []pbe.Entry, msgHandler func(msg *Hu60Msg) error) {
 			continue
 		}
 		header := entry.GetHeader()
-		logrus.Debug("binlog[%s : %d],name[%s,%s], eventType: %s", header.GetLogfileName(), header.GetLogfileOffset(), header.GetSchemaName(), header.GetTableName(), header.GetEventType())
+		logrus.Debugf("binlog[%s : %d],name[%s,%s], eventType: %s", header.GetLogfileName(), header.GetLogfileOffset(), header.GetSchemaName(), header.GetTableName(), header.GetEventType())
 
 		for _, rowData := range rowChange.GetRowDatas() {
 			var msg Hu60Msg

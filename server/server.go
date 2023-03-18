@@ -154,5 +154,9 @@ func (m *WebsocketManager) processBotAction(cmd BotCmd, uid int, ws *websocket.C
 		}
 		return
 	}
+	if cmd.Action == "ping" {
+		ws.WriteJSON(BotEvent{Event: "ping", Data: "pong"})
+		return
+	}
 	m.responseError(ws, errors.New("unsupported action"))
 }

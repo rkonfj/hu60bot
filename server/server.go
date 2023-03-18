@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gorilla/websocket"
 	"github.com/rkonfj/hu60bot/convo"
@@ -50,7 +52,11 @@ type ChatResponse struct {
 
 func NewWebsocketManager(opts ServerOptions, cm *convo.ConversationManager) *WebsocketManager {
 	return &WebsocketManager{
-		upgrader:         websocket.Upgrader{},
+		upgrader: websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
+		},
 		hu60Client:       hu60.NewClient(opts.Hu60wap6APIURL),
 		websocketConnMap: make(map[int]*websocket.Conn),
 		cm:               cm,
@@ -70,21 +76,90 @@ func (m *WebsocketManager) Push(msg *Hu60Msg) error {
 	}
 }
 
+func getRequestParam(r *http.Request, name string, noCookie bool) (value string) {
+	value = r.PostFormValue("_" + name) // POST
+	if value == "" {
+		value = r.FormValue("_" + name) // GET
+	}
+	if value == "" {
+		value = r.Header.Get("x-" + name) // Header
+	}
+	if value == "" && !noCookie {
+		cookie, err := r.Cookie("hu60_" + name) // Cookie
+		if err == nil {
+			value = cookie.Value
+		}
+	}
+	return
+}
+
+// equalASCIIFold returns true if s is equal to t with ASCII case folding as
+// defined in RFC 4790.
+func equalASCIIFold(s, t string) bool {
+	for s != "" && t != "" {
+		sr, size := utf8.DecodeRuneInString(s)
+		s = s[size:]
+		tr, size := utf8.DecodeRuneInString(t)
+		t = t[size:]
+		if sr == tr {
+			continue
+		}
+		if 'A' <= sr && sr <= 'Z' {
+			sr = sr + 'a' - 'A'
+		}
+		if 'A' <= tr && tr <= 'Z' {
+			tr = tr + 'a' - 'A'
+		}
+		if sr != tr {
+			return false
+		}
+	}
+	return s == t
+}
+
+// checkSameOrigin returns true if the origin is not set or is equal to the request host.
+func checkSameOrigin(r *http.Request) bool {
+	origin := r.Header["Origin"]
+	if len(origin) == 0 {
+		return true
+	}
+	u, err := url.Parse(origin[0])
+	if err != nil {
+		return false
+	}
+	return equalASCIIFold(u.Host, r.Host)
+}
+
 func (m *WebsocketManager) Run() error {
 	http.HandleFunc("/v1/ws", func(w http.ResponseWriter, r *http.Request) {
-		ws, err := m.upgrader.Upgrade(w, r, nil)
+		noCookie := false
+		var header http.Header = make(http.Header)
+
+		// 支持跨域访问
+		if !checkSameOrigin(r) {
+			noCookie = true
+		}
+		origin := getRequestParam(r, "origin", true)
+		if origin != "" {
+			noCookie = true
+			header["Access-Control-Allow-Origin"] = []string{origin}
+		}
+
+		ws, err := m.upgrader.Upgrade(w, r, header)
 		if err != nil {
 			logrus.Error("ws upgrade error: ", err.Error())
 			return
 		}
-		sid, err := r.Cookie("hu60_sid")
-		if err != nil {
+
+		// 获取sid（跨域时禁用cookie）
+		sid := getRequestParam(r, "sid", noCookie)
+		if sid == "" {
 			m.responseUnauthenticated(ws)
 			logrus.Warn("unauthenticated: ", err.Error())
 			return
 		}
 
-		res, err := m.hu60Client.GetProfile(context.Background(), sid.Value)
+		res, err := m.hu60Client.GetProfile(context.Background(), sid)
 		if err != nil {
 			m.responseUnauthenticated(ws)
 			logrus.Warn("unauthenticated: ", err.Error())

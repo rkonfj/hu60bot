@@ -103,7 +103,10 @@ func (m *WebsocketManager) Run() error {
 			for {
 				_, msg, err := ws.ReadMessage()
 				if err != nil {
-					m.websocketConnMap[userProfile.Uid].Close()
+					logrus.Debugf("sid is %d, readMessage error: %w", userProfile.Uid, err)
+					if !websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+						ws.Close()
+					}
 					delete(m.websocketConnMap, userProfile.Uid)
 					logrus.Info("user ", userProfile.Name, " is disconnected")
 					break

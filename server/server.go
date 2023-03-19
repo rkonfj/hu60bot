@@ -154,6 +154,12 @@ func (m *WebsocketManager) processBotAction(cmd BotCmd, uid int, ws *websocket.C
 		}
 		return
 	}
+	if cmd.Action == "rmconvo" {
+		conversationKey := fmt.Sprintf("%d", uid)
+		m.cm.MarkExpired(conversationKey)
+		ws.WriteJSON(BotEvent{Event: "rmconvo", Data: "ok"})
+		return
+	}
 	if cmd.Action == "ping" {
 		ws.WriteJSON(BotEvent{Event: "ping", Data: "pong"})
 		return

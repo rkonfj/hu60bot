@@ -99,6 +99,10 @@ func (cm *ConversationManager) Ask(words, conversationKey string) (answer string
 	return
 }
 
+func (cm *ConversationManager) MarkExpired(conversationKey string) {
+	cm.conversationContext.Invalidate(conversationKey)
+}
+
 func (cm *ConversationManager) updateConversationStats() {
 	stats := fmt.Sprintf(`conversation: %d/%d, openai tokens usage: %d/%d/%d`,
 		cm.conversationContext.Stat().Added, cm.conversationContext.Stat().Evicted,

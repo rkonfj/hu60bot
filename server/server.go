@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -18,11 +19,12 @@ import (
 )
 
 type WebsocketManager struct {
-	upgrader         websocket.Upgrader
-	hu60Client       *hu60.Client
-	websocketConnMap map[int]*websocket.Conn
-	cm               *convo.ConversationManager
-	options          ServerOptions
+	upgrader          websocket.Upgrader
+	hu60Client        *hu60.Client
+	connMap           map[int][]*websocket.Conn
+	connMapUpdateLock sync.Mutex
+	cm                *convo.ConversationManager
+	options           ServerOptions
 }
 
 type Hu60Msg struct {
@@ -57,18 +59,24 @@ func NewWebsocketManager(opts ServerOptions, cm *convo.ConversationManager) *Web
 				return true
 			},
 		},
-		hu60Client:       hu60.NewClient(opts.Hu60wap6APIURL),
-		websocketConnMap: make(map[int]*websocket.Conn),
-		cm:               cm,
-		options:          opts,
+		hu60Client:        hu60.NewClient(opts.Hu60wap6APIURL),
+		connMap:           make(map[int][]*websocket.Conn),
+		connMapUpdateLock: sync.Mutex{},
+		cm:                cm,
+		options:           opts,
 	}
 }
 
 func (m *WebsocketManager) Push(msg *Hu60Msg) error {
-	if ws, ok := m.websocketConnMap[msg.ToUID]; ok {
-		err := ws.WriteJSON(BotEvent{Event: "msg", Data: msg})
-		if err != nil {
-			return err
+	if wsArr, ok := m.connMap[msg.ToUID]; ok {
+		for _, ws := range wsArr {
+			if ws == nil {
+				continue
+			}
+			err := ws.WriteJSON(BotEvent{Event: "msg", Data: msg})
+			if err != nil {
+				logrus.Warn("websocketManger push error: ", err)
+			}
 		}
 		return nil
 	} else {
@@ -171,33 +179,56 @@ func (m *WebsocketManager) Run() error {
 			logrus.Error(err)
 			return
 		}
-		m.websocketConnMap[res.Uid] = ws
-		logrus.Info("user ", res.Name, " is connected")
+		m.connMapUpdateLock.Lock()
+		if _, ok := m.connMap[res.Uid]; !ok {
+			m.connMap[res.Uid] = []*websocket.Conn{}
+		}
+		m.connMap[res.Uid] = append(m.connMap[res.Uid], ws)
+		m.connMapUpdateLock.Unlock()
+		logrus.Infof("user %s(%s) is connected, current valid conn count is %d",
+			res.Name, ws.RemoteAddr(), len(m.connMap[res.Uid]))
 
-		go func(userProfile hu60.GetProfileResponse, ws *websocket.Conn) {
-			for {
-				_, msg, err := ws.ReadMessage()
-				if err != nil {
-					logrus.Debugf("sid is %d, readMessage error: %w", userProfile.Uid, err)
-					if !websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-						ws.Close()
-					}
-					delete(m.websocketConnMap, userProfile.Uid)
-					logrus.Info("user ", userProfile.Name, " is disconnected")
-					break
-				}
-				var cmd BotCmd
-				err = json.NewDecoder(strings.NewReader(string(msg))).Decode(&cmd)
-				if err != nil {
-					m.responseError(ws, err)
-					return
-				}
-				m.processBotAction(cmd, res.Uid, ws)
-			}
-		}(res, ws)
+		go m.connMessageListener(res, ws)
 	})
 	logrus.Info("bot listening on ", m.options.Listen, " for interact now. websocket endpoint is /v1/ws")
 	return http.ListenAndServe(m.options.Listen, nil)
+}
+
+func (m *WebsocketManager) connMessageListener(userProfile hu60.GetProfileResponse, ws *websocket.Conn) {
+	for {
+		_, msg, err := ws.ReadMessage()
+		if err != nil {
+			logrus.Debugf("sid is %d, readMessage error: %w", userProfile.Uid, err)
+			if !websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+				ws.Close()
+			}
+			m.connMapUpdateLock.Lock()
+			validConnCount := len(m.connMap[userProfile.Uid])
+			for i, _ws := range m.connMap[userProfile.Uid] {
+				if _ws == nil {
+					validConnCount--
+				}
+				if _ws.RemoteAddr().String() == ws.RemoteAddr().String() {
+					m.connMap[userProfile.Uid][i] = nil
+					validConnCount--
+				}
+			}
+			if validConnCount == 0 {
+				delete(m.connMap, userProfile.Uid)
+			}
+			m.connMapUpdateLock.Unlock()
+			logrus.Infof("user %s(%s) is disconnected, current valid conn count is %d",
+				userProfile.Name, ws.RemoteAddr(), len(m.connMap[userProfile.Uid]))
+			break
+		}
+		var cmd BotCmd
+		err = json.NewDecoder(strings.NewReader(string(msg))).Decode(&cmd)
+		if err != nil {
+			m.responseError(ws, err)
+			return
+		}
+		m.processBotAction(cmd, userProfile.Uid, ws)
+	}
 }
 
 func (m *WebsocketManager) responseUnauthenticated(ws *websocket.Conn) {
@@ -243,4 +274,8 @@ func (m *WebsocketManager) processBotAction(cmd BotCmd, uid int, ws *websocket.C
 		return
 	}
 	m.responseError(ws, errors.New("unsupported action"))
+}
+
+func GetConnID() {
+
 }

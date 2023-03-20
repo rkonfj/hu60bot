@@ -54,5 +54,8 @@ func (c *Client) GetProfile(ctx context.Context, sid string) (response GetProfil
 	}
 	req.Header.Set("Cookie", "hu60_sid="+sid)
 	err = c.sendRequest(req, &response)
+	if response.Uid == 0 {
+		err = fmt.Errorf("can not get user uid. sid %s is not correct", sid)
+	}
 	return
 }

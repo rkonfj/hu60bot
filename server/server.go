@@ -163,14 +163,14 @@ func (m *WebsocketManager) Run() error {
 		sid := getRequestParam(r, "sid", noCookie)
 		if sid == "" {
 			m.responseUnauthenticated(ws)
-			logrus.Warn("unauthenticated: ", err.Error())
+			logrus.Warn("authentication failed: sid not found")
 			return
 		}
 
 		res, err := m.hu60Client.GetProfile(context.Background(), sid)
 		if err != nil {
 			m.responseUnauthenticated(ws)
-			logrus.Warn("unauthenticated: ", err.Error())
+			logrus.Warn("authentication failed: ", err.Error())
 			return
 		}
 
@@ -185,20 +185,28 @@ func (m *WebsocketManager) Run() error {
 		}
 		m.connMap[res.Uid] = append(m.connMap[res.Uid], ws)
 		m.connMapUpdateLock.Unlock()
-		logrus.Infof("user %s is connected, current valid conn count is %d",
-			res.Name, len(m.connMap[res.Uid]))
+		logrus.Infof("user %s is connected, there are currently %d connections",
+			res.Name, m.validConnCount(res.Uid))
 
 		go m.connMessageListener(res, ws)
 	})
 	logrus.Info("bot listening on ", m.options.Listen, " for interact now. websocket endpoint is /v1/ws")
 	return http.ListenAndServe(m.options.Listen, nil)
 }
-
+func (m *WebsocketManager) validConnCount(uid int) int {
+	validConnCount := len(m.connMap[uid])
+	for _, _ws := range m.connMap[uid] {
+		if _ws == nil {
+			validConnCount--
+		}
+	}
+	return validConnCount
+}
 func (m *WebsocketManager) connMessageListener(userProfile hu60.GetProfileResponse, ws *websocket.Conn) {
 	for {
 		_, msg, err := ws.ReadMessage()
 		if err != nil {
-			logrus.Debugf("sid is %d, readMessage error: %w", userProfile.Uid, err)
+			logrus.Debugf("user %s, read message error: %w", userProfile.Name, err)
 			if !websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 				ws.Close()
 			}
@@ -217,8 +225,8 @@ func (m *WebsocketManager) connMessageListener(userProfile hu60.GetProfileRespon
 				delete(m.connMap, userProfile.Uid)
 			}
 			m.connMapUpdateLock.Unlock()
-			logrus.Infof("user %s is disconnected, current valid conn count is %d",
-				userProfile.Name, len(m.connMap[userProfile.Uid]))
+			logrus.Infof("user %s is disconnected, there are currently %d connections",
+				userProfile.Name, validConnCount)
 			break
 		}
 		var cmd BotCmd
@@ -274,8 +282,4 @@ func (m *WebsocketManager) processBotAction(cmd BotCmd, uid int, ws *websocket.C
 		return
 	}
 	m.responseError(ws, errors.New("unsupported action"))
-}
-
-func GetConnID() {
-
 }

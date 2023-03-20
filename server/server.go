@@ -185,8 +185,8 @@ func (m *WebsocketManager) Run() error {
 		}
 		m.connMap[res.Uid] = append(m.connMap[res.Uid], ws)
 		m.connMapUpdateLock.Unlock()
-		logrus.Infof("user %s(%s) is connected, current valid conn count is %d",
-			res.Name, ws.RemoteAddr(), len(m.connMap[res.Uid]))
+		logrus.Infof("user %s is connected, current valid conn count is %d",
+			res.Name, len(m.connMap[res.Uid]))
 
 		go m.connMessageListener(res, ws)
 	})
@@ -208,7 +208,7 @@ func (m *WebsocketManager) connMessageListener(userProfile hu60.GetProfileRespon
 				if _ws == nil {
 					validConnCount--
 				}
-				if _ws.RemoteAddr().String() == ws.RemoteAddr().String() {
+				if _ws == ws {
 					m.connMap[userProfile.Uid][i] = nil
 					validConnCount--
 				}
@@ -217,8 +217,8 @@ func (m *WebsocketManager) connMessageListener(userProfile hu60.GetProfileRespon
 				delete(m.connMap, userProfile.Uid)
 			}
 			m.connMapUpdateLock.Unlock()
-			logrus.Infof("user %s(%s) is disconnected, current valid conn count is %d",
-				userProfile.Name, ws.RemoteAddr(), len(m.connMap[userProfile.Uid]))
+			logrus.Infof("user %s is disconnected, current valid conn count is %d",
+				userProfile.Name, len(m.connMap[userProfile.Uid]))
 			break
 		}
 		var cmd BotCmd

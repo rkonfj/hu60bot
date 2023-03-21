@@ -150,12 +150,12 @@
 
 #hu60botChat #chatContainer {
     overflow-y: auto;
-    padding: 5px 0 0 0;
+    padding: 10px 0 0 0;
     height: 590px;
 }
 
 #chatInput {
-    padding: 10px 20px 0 10px;
+    padding: 5px 20px 0 10px;
 }
 
 #chatInput textarea {
@@ -194,7 +194,7 @@
     font-size: 17px;
     font-weight: bold;
     line-height: 26px;
-    margin: 0 20px;
+    margin: 0 10px;
     padding: 10px;
     margin-bottom: 0;
 }

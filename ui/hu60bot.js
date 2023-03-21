@@ -6,6 +6,7 @@ window.hu60_res_robot_icon = 'https://file.hu60.cn/avatar/-50.jpg'
 window.hu60_site_url = 'https://hu60.cn'
 window.hu60_site_file_url = 'https://file.hu60.cn'
 window.hu60_hu60bot_uid = -54
+window.hu60_hu60bot_welcome = '您好，有什么我可以为您效劳的吗？'
 
 function startPlugin() {
 
@@ -38,16 +39,24 @@ function initCurrentUserInfo() {
 
 function initHu60botChat() {
     let hu60botChatBaseHTML = 
-    '<div id="hu60botChat"><div id="chatList"><div class="hltitle"><span class="hu60botwsstatus" title="disconnected"></span><img src="'
-    +window.hu60_res_exit_chat_icon+'" class="hu60botminwindow" title="minimize"/></div><ul></ul></div><div id="chatWindow"></div></div>'
-    document.body.innerHTML+=hu60botChatBaseHTML
-  	document.querySelector('#hu60botChat .hu60botminwindow').addEventListener('click', e => hu60botWindowOp(false))
+        `<div id="hu60botChat">
+            <div id="chatList">
+                <div class="hltitle">
+                    <span class="hu60botwsstatus" title="disconnected"></span>
+                    <img src="${window.hu60_res_exit_chat_icon}" class="hu60botminwindow" title="minimize"/>
+                </div>
+                <ul></ul>
+            </div>
+            <div id="chatWindow"></div>
+        </div>`
+    document.body.innerHTML += hu60botChatBaseHTML
+  	
+    document.querySelector('#hu60botChat .hu60botminwindow')
+        .addEventListener('click', e => hu60botWindowOp(false))
+    
     renderChatList()
-    document.querySelector('#chat--54').click()
-
-    // chatWindow
-    let chatWindow = document.querySelector("#chatWindow")
-
+    document.querySelector(`#chat-${window.hu60_hu60bot_uid}`)
+        .click()
 }
 
 function renderChatList() {
@@ -80,17 +89,17 @@ function renderChatList() {
 }
 
 function appendChatList(chat, opts={updateStorage: true, focused: false}) {
+    // UI
     const chatItem = document.createElement('li')
-    chatItem.innerHTML = '<span class="newMsgTips">'+chat.tipsCount+'</span><img class="cavatar" src="'+chat.avatar+'" />'
-        +chat.name+'<br /><span class="latestMsgOverview">'
-        +(chat.overview?chat.overview:"")+'</span>'
-    chatItem.id = 'chat-' + chat.uid
-    if (opts.focused) {
-        document.querySelectorAll('#chatList li').forEach( item => item.classList.remove('activeChat'))
-        chatItem.classList.add('activeChat')
-    }
+    chatItem.innerHTML = 
+        `<span class="newMsgTips">${chat.tipsCount}</span>
+        <img class="cavatar" src="${chat.avatar}" />
+        ${chat.name}<br />
+        <span class="latestMsgOverview">${chat.overview?chat.overview:""}</span>`
+    chatItem.id = `chat-${chat.uid}`
     chatItem.addEventListener('click', e => {
-        document.querySelectorAll('#chatList li').forEach( item => item.classList.remove('activeChat'))
+        document.querySelectorAll('#chatList li')
+            .forEach( item => item.classList.remove('activeChat'))
         chatItem.classList.add("activeChat")
         initChatWindow(chat)
         let newMsgTips = chatItem.querySelector('.newMsgTips')
@@ -107,12 +116,19 @@ function appendChatList(chat, opts={updateStorage: true, focused: false}) {
         window.localStorage.setItem("hu60bot_chat_list.json", JSON.stringify(hu60botChatList))
     })
 
+    if (opts.focused) {
+        document.querySelectorAll('#chatList li')
+            .forEach( item => item.classList.remove('activeChat'))
+        chatItem.classList.add('activeChat')
+    }
+
     if (chat.tipsCount > 0) {
         chatItem.querySelector('.newMsgTips').style.cssText = 'display: block'
     }
 
-    let chatList = document.querySelector("#chatList ul")
-    chatList.appendChild(chatItem)
+    document.querySelector("#chatList ul").appendChild(chatItem)
+
+    // Update data
     if(opts.updateStorage) {
         let hu60bot_chat_list = window.localStorage.getItem("hu60bot_chat_list.json")
         let hu60botChatList = null
@@ -128,14 +144,16 @@ function appendChatList(chat, opts={updateStorage: true, focused: false}) {
 
 function initChatWindow(chat) {
     if(window.hu60_chatwindow) {
+        // update UI
         window.hu60_chatwindow = chat.uid
         window.hu60_chatwindow_obj = chat
         document.querySelector("#ctitle .chatName").innerText = chat.name
         document.querySelector('#chatContainer').innerHTML = ''
-        let convo = window.localStorage.getItem(chat.uid + "convo.json")
+        let convo = window.localStorage.getItem(`${chat.uid}convo.json`)
         if (convo == null) {
             if (chat.isRobot) {
-                appendChatText('您好，有什么我可以为您效劳的吗？', chat.uid, {self: false, updateStorage: true})
+                appendChatText(window.hu60_hu60bot_welcome, chat.uid, 
+                    {self: false, updateStorage: true})
             }
         } else {
             JSON.parse(convo).forEach(c => {
@@ -144,8 +162,13 @@ function initChatWindow(chat) {
         }
         return
     }
+    // create UI
     window.hu60_chatwindow = chat.uid
     window.hu60_chatwindow_obj = chat
+
+    let chatWindow = document.querySelector("#chatWindow")
+
+
     const chatReturnBtn = document.createElement('img')
     chatReturnBtn.id = 'chatReturnBtn'
     chatReturnBtn.src = window.hu60_res_back_icon
@@ -153,19 +176,26 @@ function initChatWindow(chat) {
         document.querySelector('#chatWindow').style.display = 'none'
         document.querySelector('#chatList').style.display = 'block'
     })
+    chatWindow.appendChild(chatReturnBtn)
+
 
     const chatTitile = document.createElement("div")
     chatTitile.id = 'ctitle'
-    chatTitile.innerHTML = '<span class="chatName">' + chat.name + '</span>'
+    chatTitile.innerHTML = `<span class="chatName">${chat.name}</span>`
+    chatWindow.appendChild(chatTitile)
+
 
     const chatContainer = document.createElement("ul")
     chatContainer.id = 'chatContainer'
+    chatWindow.appendChild(chatContainer)
+
 
     const chatInput = document.createElement("div")
     chatInput.id = 'chatInput'
+
     const _chatInputSend = document.createElement("button")
     _chatInputSend.innerText="发送"
-    _chatInputSend.style.cssText = 'display: none'
+    _chatInputSend.style.display = 'none'
     _chatInputSend.id = 'chatInputSend'
     _chatInputSend.addEventListener("click", e => {
         let text = document.querySelector("#chatInput textarea")
@@ -179,55 +209,52 @@ function initChatWindow(chat) {
             setTimeout(()=>{text.style.cssText = "border: 0.5px solid #ddd"},800)
             return
         }
-        handleSendMsg(text.value)
+        handleMsgSend(text.value)
         appendChatText(text.value, window.hu60_chatwindow, {self: true, updateStorage: true})
         text.value = ''
-        _chatInputSend.style.cssText = 'display: none'
+        _chatInputSend.style.display = 'none'
     })
+
     const _chatInput = document.createElement("textarea")
     _chatInput.placeholder="请提问（Ctrl + Enter 快捷发送）"
-    _chatInput.addEventListener("input", e=>{_chatInputSend.style.cssText = 'display: block'})
-
+    _chatInput.addEventListener("input", e=>{_chatInputSend.style.display = 'block'})
 
     chatInput.appendChild(_chatInput)
     chatInput.appendChild(_chatInputSend)
-
-    let chatWindow = document.querySelector("#chatWindow")
-    chatWindow.appendChild(chatReturnBtn)
-    chatWindow.appendChild(chatTitile)
-    chatWindow.appendChild(chatContainer)
+    
     chatWindow.appendChild(chatInput)
 
-
-    let convo = window.localStorage.getItem(chat.uid + "convo.json")
+    // render conversation
+    let convo = window.localStorage.getItem(`${chat.uid}convo.json`)
     if (convo == null) {
         if (chat.isRobot) {
-            appendChatText('您好，有什么我可以为您效劳的吗？', chat.uid, {self: false, updateStorage: true})
+            appendChatText(window.hu60_hu60bot_welcome, chat.uid, 
+                {self: false, updateStorage: true})
         }
     } else {
-        JSON.parse(convo).forEach(c => {
-            appendChatText(c.words, chat.uid, {self: c.self, updateStorage: false})  
-        })
+        JSON.parse(convo).forEach(c => 
+            appendChatText(c.words, chat.uid, {self: c.self, updateStorage: false}))
     }
 }
 
 function appendChatText(words, uid, opts={self: false,updateStorage: true}) {
     if (opts.updateStorage) {
-        let convo = window.localStorage.getItem(uid + "convo.json")
+        // update convo.json and chat_list.json (for order the chat list)
+        let convo = window.localStorage.getItem(`${uid}convo.json`)
         let convoObj = JSON.parse(convo)
         if (convo == null) {
             convoObj = []
         }
         convoObj.push({words: words,self: opts.self})
-        window.localStorage.setItem(uid + "convo.json", JSON.stringify(convoObj))
+        window.localStorage.setItem(`${uid}convo.json`, JSON.stringify(convoObj))
 
-        document.querySelector('#chat-' + uid + ' .latestMsgOverview').innerText = words
+        document.querySelector(`#chat-${uid} .latestMsgOverview`).innerText = words
         if(window.hu60_chatwindow != uid) {
-            let newMsgTips = document.querySelector('#chat-' + uid + ' .newMsgTips')
+            let newMsgTips = document.querySelector(`#chat-${uid} .newMsgTips`)
             let newTipsCount = parseInt(newMsgTips.innerText)+1
             newMsgTips.innerText = newTipsCount
             if(newTipsCount>0) {
-                newMsgTips.style.cssText = 'display: block'
+                newMsgTips.style.display = 'block'
             }
         }
         let hu60bot_chat_list = window.localStorage.getItem('hu60bot_chat_list.json')
@@ -240,7 +267,8 @@ function appendChatText(words, uid, opts={self: false,updateStorage: true}) {
                     hit = i
                     chat.overview = words
                     if(window.hu60_chatwindow != uid) {
-                        chat.tipsCount = parseInt(document.querySelector('#chat-' + uid + ' .newMsgTips').innerText)
+                        chat.tipsCount = 
+                            parseInt(document.querySelector(`#chat-${uid} .newMsgTips`).innerText)
                     }
                     hu60botChatList[i] = chat
                     break
@@ -256,7 +284,7 @@ function appendChatText(words, uid, opts={self: false,updateStorage: true}) {
     if(window.hu60_chatwindow != uid) {
         return
     }
-
+    // create UI (text, avatar and loading icon)
     const chatItem = document.createElement("li")
     chatItem.classList.add('chat')
 
@@ -278,7 +306,7 @@ function appendChatText(words, uid, opts={self: false,updateStorage: true}) {
         avatar.classList.add('crightpos')
         text.classList.add('crightpos')
         text.classList.add('cuser')
-        avatar.src = 'https://file.hu60.cn/avatar/'+window.hu60_uid+'.jpg'
+        avatar.src = `${window.hu60_site_file_url}/avatar/${window.hu60_uid}.jpg`
 
         if(opts.updateStorage) {
             const icon = document.createElement("img")
@@ -289,7 +317,8 @@ function appendChatText(words, uid, opts={self: false,updateStorage: true}) {
         }
     } else {
         if(opts.updateStorage) {
-            document.querySelectorAll('.send_status_icon').forEach(icon => icon.style.cssText='display: none')
+            document.querySelectorAll('.send_status_icon')
+                .forEach(icon => icon.style.display = 'none')
         }
     }
     chatContainer.scrollTop = chatContainer.scrollHeight
@@ -297,23 +326,22 @@ function appendChatText(words, uid, opts={self: false,updateStorage: true}) {
 
 function hu60botWindowOp(open) {
     if(open) {
-      	document.querySelector('header').style.cssText= 'display: none'
-        document.querySelector('.container').style.cssText= 'display: none'
-        document.querySelector('footer').style.cssText= 'display: none'
+      	document.querySelector('header').style.display = 'none'
+        document.querySelector('.container').style.display = 'none'
+        document.querySelector('footer').style.display = 'none'
         document.querySelector('#hu60botChat').style.display = 'flex'
         let chatContainer = document.querySelector('#chatContainer') 
         chatContainer.scrollTop = chatContainer.scrollHeight
         return
     }
-  	document.querySelector('header').style.cssText= 'display: block'
-    document.querySelector('.container').style.cssText= 'display: block'
-    document.querySelector('footer').style.cssText= 'display: block'
+  	document.querySelector('header').style.display= 'block'
+    document.querySelector('.container').style.display= 'block'
+    document.querySelector('footer').style.display= 'block'
     document.querySelector('#hu60botChat').style.display = 'none'
 }
 
 
 function initGlobalListener() {
-    // keydown
     document.addEventListener("keydown", function(event){
         if(event.ctrlKey && event.code === 'Enter') {
             document.querySelector('#chatInput button').click()
@@ -321,35 +349,26 @@ function initGlobalListener() {
     })
 }
 
-
 function connectWs() {
     let protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
-    let ws = new WebSocket(protocol+"://"+location.host+"/ws/msg")
+    let ws = new WebSocket(`${protocol}://${location.host}/ws/msg`)
     window.hu60_ws = ws
-    ws.addEventListener("message", (event) => {
-        let msg = JSON.parse(event.data)
-        handleWsMsg(msg)
-    })
+    ws.addEventListener("message", (event) => handleWsMsg(JSON.parse(event.data)))
+  	ws.addEventListener("error", e => window.hu60_ws.close())
     ws.addEventListener("open", e => {
         window._hu60bot_hb_task = setInterval(() => ws.send('{"action":"ping"}'), 60000)
         let wsStatus = document.querySelector('#chatList .hu60botwsstatus')
         wsStatus.style.cssText = 'background: green'
         wsStatus.title = 'connected'
     })
-  	ws.addEventListener("error", e => {
-     	window.hu60_ws.close()
-    })
     ws.addEventListener("close", e => {
         clearInterval(window._hu60bot_hb_task)
         let wsStatus = document.querySelector('#chatList .hu60botwsstatus')
         wsStatus.style.cssText = 'background: red'
         wsStatus.title = 'WS_CLOSED'
-        setTimeout(() => {
-            window.hu60_ws = connectWs()
-        }, 5000)
+        setTimeout(() => window.hu60_ws = connectWs(), 5000)
     })
 }
-
 
 function showPluginDoor() {
     let floatPluginMenu = document.querySelector('#floatPluginMenu')
@@ -360,7 +379,7 @@ function showPluginDoor() {
     }
     let hu60botPlugin = document.createElement("div")
     hu60botPlugin.id = 'hu60botPlugin'
-    hu60botPlugin.innerHTML = '<img src="'+window.hu60_res_bot_icon+'" />'
+    hu60botPlugin.innerHTML = `<img src="${window.hu60_res_bot_icon}" />`
     hu60botPlugin.addEventListener('click', e => {
         let hu60botChat = document.querySelector('#hu60botChat')
         if (hu60botChat.style.display == 'none' || hu60botChat.style.display == "") {
@@ -372,8 +391,7 @@ function showPluginDoor() {
     floatPluginMenu.appendChild(hu60botPlugin)
 }
 
-
-async function handleSendMsg(words) {
+async function handleMsgSend(words) {
     let currentChatWindowUID = window.hu60_chatwindow
     if (!currentChatWindowUID) {
         alert("SYS_ERR")
@@ -384,10 +402,12 @@ async function handleSendMsg(words) {
             window.hu60_ws.send(JSON.stringify({action: "chat", data: words}))
         } catch(e) {
           	log.debug(JSON.stringify(e))
-            appendChatText("WS_SEND_ERR: " + JSON.stringify(e), window.hu60_chatwindow, {self: false,updateStorage: false})
+            appendChatText("WS_SEND_ERR: " + JSON.stringify(e), window.hu60_chatwindow, 
+                {self: false,updateStorage: false})
             try{
                 if (window.hu60_ws.readyState === WebSocket.CLOSED) {
-                    setTimeout(()=>{window.hu60_ws.send(JSON.stringify({action: "chat", data: text.value}))}, 6000)
+                    setTimeout(() => 
+                        window.hu60_ws.send(JSON.stringify({action: "chat", data: text.value})), 6000)
                 }
             } catch(_){}
         }
@@ -395,9 +415,7 @@ async function handleSendMsg(words) {
     }
 
     // 发送聊天室消息
-
     let chatroom = await (await fetch(window.hu60_site_url + '/q.php/addin.chat.hu60bot.json')).json()
-
     let formData = new FormData()
     formData.append('content', '<!md>\n@#' + currentChatWindowUID + ' ' + words)
     formData.append('token', chatroom.token)
@@ -412,13 +430,13 @@ async function handleSendMsg(words) {
             document.querySelectorAll('.send_status_icon').forEach(icon => icon.style.cssText='display: none')
         }
     })
-    
 }
-
 
 function handleWsMsg(msg) {
     if (msg.event == 'chat') {
-        appendChatText((msg.data.newConversation?"[新会话]":"") + setext(msg.data.response), window.hu60_hu60bot_uid, {self: false, updateStorage: true})
+        appendChatText(`${msg.data.newConversation?"[新会话]":""}${setext(msg.data.response)}`,
+            window.hu60_hu60bot_uid, 
+            {self: false, updateStorage: true})
         return
     }
 
@@ -426,23 +444,24 @@ function handleWsMsg(msg) {
         let msgContent = JSON.parse(msg.data.content)
         let msgContentText = getHu60MsgText(msgContent[0].msg)
 
-        if (document.querySelector('#chat-'+msg.data.byuid) == null) {
+        if (document.querySelector(`#chat-${msg.data.byuid}`) == null) {
             if (!window.hu60_user_info_map) {
                 window.hu60_user_info_map = {}
             }
             if (!window.hu60_user_info_map[msg.data.byuid]) {
-                fetch(window.hu60_site_url+'/q.php/user.info.'+msg.data.byuid+'.json?_origin=*')
+                fetch(window.hu60_site_url+'/q.php/user.info.${msg.data.byuid}.json')
                 .then(res => res.json()).then(jres => {
                     window.hu60_user_info_map[msg.data.byuid] = jres
                     appendChatList({
                         uid: msg.data.byuid,
                         name: jres.name, 
-                        avatar: window.hu60_site_file_url+"/avatar/"+msg.data.byuid+".jpg", 
+                        avatar: `${window.hu60_site_file_url}/avatar/${msg.data.byuid}.jpg`, 
                         isRobot: msg.data.byuid<0,
                         overview: msgContentText,
                         tipsCount: 0
                     }, {updateStorage: true})
-                    appendChatText(msgContentText, msg.data.byuid, {self: false, updateStorage: true})
+                    appendChatText(msgContentText, msg.data.byuid, 
+                        {self: false, updateStorage: true})
                 })
                 return
             }
@@ -450,7 +469,7 @@ function handleWsMsg(msg) {
             appendChatList({
                 uid: msg.data.byuid,
                 name: userInfo.name, 
-                avatar: window.hu60_site_file_url+"/avatar/"+msg.data.byuid+".jpg", 
+                avatar: `${window.hu60_site_file_url}/avatar/${msg.data.byuid}.jpg`, 
                 isRobot: msg.data.byuid<0,
                 overview: msgContentText,
                 tipsCount: 0
@@ -460,33 +479,8 @@ function handleWsMsg(msg) {
         return
     }
 
-    console.debug('discard non chat message: ', event.data)
+    console.debug('unsupported message: ', msg)
 }
-
-
-function getHu60MsgText(msgContent) {
-  	const validUnits = ["text","imgzh","mdpre"]
-    let text = msgContent.filter(unit => validUnits.includes(unit.type) ).map(unit => {
-    	if(unit.type == "text") {
-        	return setext(unit.value)
-        }
-      	if(unit.type == "mdpre") {
-        	return unit.data
-        }
-        if(unit.type == "mdcode") {
-            return unit.quote + unit.lang + unit.data + unit.quote
-        }
-      	if(unit.type == "imgzh") {
-        	return '<img style="max-width: 90%;display: block" src="'+unit.src+'" alt="'+unit.alt+'" />'
-        }
-    }).join("").trim()
-    if (text.startsWith(',') || text.startsWith('，')) {
-        text = text.substr(1)
-    }
-    console.debug(text)
-    return text
-}
-
 
 function onSmallScreenDevice() {
     let hu60botChat = document.querySelector('#hu60botChat')
@@ -498,21 +492,49 @@ function onSmallScreenDevice() {
     let winHeight = window.innerHeight
 
 
-    hu60botChat.style.cssText = 'height: ' + winHeight + 'px'
-    chatContainer.style.cssText = 'height: ' + (winHeight - 130) + 'px'
-    chatList.style.cssText = 'display: none'
+    hu60botChat.style.cssText = `height: ${winHeight}px`
+    chatContainer.style.cssText = `height: ${(winHeight - 130)}px`
 
+    chatList.style.display = 'none'
     chatReturnBtn.style.display = 'block'
 
+    document.querySelectorAll('#chatList li')
+        .forEach(chatItem => chatItem.addEventListener('click', e=>{
+            document.querySelector('#chatWindow').style.display = 'block'
+            document.querySelector('#chatList').style.display = 'none'
+        }))
+}
 
-    document.querySelectorAll('#chatList li').forEach(chatItem => chatItem.addEventListener('click', e=>{
-        document.querySelector('#chatWindow').style.display = 'block'
-        document.querySelector('#chatList').style.display = 'none'
-    }))
+
+startPlugin()
+
+// -----
+// utils
+// -----
+
+function getHu60MsgText(msgContent) {
+    const validUnits = ["text","imgzh","mdpre"]
+  let text = msgContent.filter(unit => validUnits.includes(unit.type) ).map(unit => {
+      if(unit.type == "text") {
+          return setext(unit.value)
+      }
+        if(unit.type == "mdpre") {
+          return unit.data
+      }
+      if(unit.type == "mdcode") {
+          return unit.quote + unit.lang + unit.data + unit.quote
+      }
+        if(unit.type == "imgzh") {
+          return `<img style="max-width: 90%;display: block" src="${unit.src}" alt="${unit.alt}" />`
+      }
+  }).join("").trim()
+  if (text.startsWith(',') || text.startsWith('，')) {
+      text = text.substr(1)
+  }
+  console.debug(text)
+  return text
 }
 
 function setext(unsestr) {
-    return unsestr.replaceAll('<', '&lt;').replaceAll('>','&gt;').replaceAll('\n', '<br />').replaceAll(' ', '&nbsp;')
+    return unsestr.replaceAll('<', '&lt;').replaceAll('>','&gt;').replaceAll(' ', '&nbsp;').replaceAll('\n', '<br />')
 }
-
-startPlugin()

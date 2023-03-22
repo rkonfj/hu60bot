@@ -367,6 +367,7 @@ function appendChatText(words, uid, opts={self: false,updateStorage: true}) {
         avatar.classList.add('crightpos')
         text.classList.add('crightpos')
         text.classList.add('cuser')
+        text.innerText = words
         avatar.src = `${window.hu60_site_file_url}/avatar/${window.hu60_uid}.jpg`
 
         if(opts.updateStorage) {
@@ -614,6 +615,11 @@ function getHu60MsgText(msgContent) {
           return `<img style="max-width: 90%;display: block" src="${unit.src}" alt="${unit.alt}" />`
       }
   }).join("").trim()
+  for(let i=0;i<3;i++) {
+    if(text.startsWith('<br />')) {
+        text = text.substr(6)
+    }
+  }
   for(let i =0;i<5;i++) {
     if (text.startsWith(',') || text.startsWith('，') || text.startsWith('\n')) {
         text = text.substr(1)

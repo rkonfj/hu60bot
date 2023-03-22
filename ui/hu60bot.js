@@ -3,6 +3,7 @@ window.hu60_res_back_icon = '/q.php/api.webplug-file/22780_public_return_icon.sv
 window.hu60_res_loading_icon = '/q.php/api.webplug-file/22780_public_loading.svg'
 window.hu60_res_exit_chat_icon = '/q.php/api.webplug-file/22780_public_exit_window.svg'
 window.hu60_res_clear_icon = '/q.php/api.webplug-file/22780_public_cancel_icon.svg'
+window.hu60_res_clear_all_icon = '/q.php/api.webplug-file/22780_public_qingkong_icon.svg'
 window.hu60_res_robot_icon = 'https://file.hu60.cn/avatar/-50.jpg'
 window.hu60_site_url = 'https://hu60.cn'
 window.hu60_site_file_url = 'https://file.hu60.cn'
@@ -21,9 +22,8 @@ function startPlugin() {
 
     showPluginDoor()
 
-    if (window.innerWidth <= 1080) {
-        onSmallScreenDevice()
-    } 
+    smallScreenDeviceSafeInit()
+    
 }
 
 function initCurrentUserInfo() {
@@ -45,6 +45,7 @@ function initHu60botChat() {
                 <div class="hltitle">
                     <span class="hu60botwsstatus" title="disconnected"></span>
                     <img src="${window.hu60_res_exit_chat_icon}" class="hu60botminwindow" title="minimize"/>
+                    <img src="${window.hu60_res_clear_all_icon}" class="hu60botclearall hu60botmenuicon" title="clear all conversation" />
                 </div>
                 <ul></ul>
             </div>
@@ -54,7 +55,23 @@ function initHu60botChat() {
   	
     document.querySelector('#hu60botChat .hu60botminwindow')
         .addEventListener('click', e => hu60botWindowOp(false))
+
+    document.querySelector('#hu60botChat .hu60botclearall')
+        .addEventListener('click', e => {
+            JSON.parse(window.localStorage.getItem('hu60bot_chat_list.json')).forEach(chat => window.localStorage.removeItem(`${chat.uid}convo.json`))
+            window.localStorage.removeItem('hu60bot_chat_list.json')
+            initChatWindowData()
+            document.querySelectorAll('#chatList li')
+                .forEach(chatItem => chatItem.addEventListener('click', e=>{
+                    document.querySelector('#chatWindow').style.display = 'block'
+                    document.querySelector('#chatList').style.display = 'none'
+                }))
+        })
     
+    initChatWindowData()
+}
+
+function initChatWindowData() {
     renderChatList()
     document.querySelector(`#chat-${window.hu60_hu60bot_uid}`)
         .click()
@@ -167,6 +184,9 @@ function appendChatList(chat, opts={updateStorage: true, focused: false}) {
         } else {
             hu60botChatList = JSON.parse(hu60bot_chat_list)
         }
+        if(hu60botChatList[0].uid == chat.uid) {
+            return
+        }
         hu60botChatList.unshift(chat)
         window.localStorage.setItem("hu60bot_chat_list.json", JSON.stringify(hu60botChatList))
     }
@@ -275,9 +295,20 @@ function appendChatText(words, uid, opts={self: false,updateStorage: true}) {
         if (convo == null) {
             convoObj = []
         }
-        convoObj.push({words: words,self: opts.self})
-        window.localStorage.setItem(`${uid}convo.json`, JSON.stringify(convoObj))
 
+        let isRepeat = false
+        if(convoObj.length > 0) {
+            let lastConvo = convoObj.slice(-1)[0]
+            if(lastConvo.words == words && lastConvo.self == opts.self) {
+                isRepeat = true
+            }
+        }
+        
+        if(!isRepeat) {
+            convoObj.push({words: words,self: opts.self})
+            window.localStorage.setItem(`${uid}convo.json`, JSON.stringify(convoObj))
+        }
+        
         document.querySelector(`#chat-${uid} .latestMsgOverview`).innerText = words
         if(window.hu60_chatwindow != uid) {
             let newMsgTips = document.querySelector(`#chat-${uid} .newMsgTips`)
@@ -536,27 +567,28 @@ function handleWsMsg(msg) {
     console.debug('unsupported message: ', msg)
 }
 
-function onSmallScreenDevice() {
-    let hu60botChat = document.querySelector('#hu60botChat')
-    let chatList = document.querySelector('#chatList')
-    let chatWindow = document.querySelector('#chatWindow')
-    let chatContainer = document.querySelector('#chatContainer')
-    let chatReturnBtn = document.querySelector('#chatReturnBtn')
+function smallScreenDeviceSafeInit() {
+    if (window.innerWidth <= 1080) {
+        let hu60botChat = document.querySelector('#hu60botChat')
+        let chatList = document.querySelector('#chatList')
+        let chatContainer = document.querySelector('#chatContainer')
+        let chatReturnBtn = document.querySelector('#chatReturnBtn')
 
-    let winHeight = window.innerHeight
+        let winHeight = window.innerHeight
 
 
-    hu60botChat.style.cssText = `height: ${winHeight}px`
-    chatContainer.style.cssText = `height: ${(winHeight - 130)}px`
+        hu60botChat.style.cssText = `height: ${winHeight}px`
+        chatContainer.style.cssText = `height: ${(winHeight - 130)}px`
 
-    chatList.style.display = 'none'
-    chatReturnBtn.style.display = 'block'
+        chatList.style.display = 'none'
+        chatReturnBtn.style.display = 'block'
 
-    document.querySelectorAll('#chatList li')
-        .forEach(chatItem => chatItem.addEventListener('click', e=>{
-            document.querySelector('#chatWindow').style.display = 'block'
-            document.querySelector('#chatList').style.display = 'none'
-        }))
+        document.querySelectorAll('#chatList li')
+            .forEach(chatItem => chatItem.addEventListener('click', e=>{
+                document.querySelector('#chatWindow').style.display = 'block'
+                document.querySelector('#chatList').style.display = 'none'
+            }))
+    }
 }
 
 

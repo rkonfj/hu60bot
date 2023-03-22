@@ -61,11 +61,6 @@ function initHu60botChat() {
             JSON.parse(window.localStorage.getItem('hu60bot_chat_list.json')).forEach(chat => window.localStorage.removeItem(`${chat.uid}convo.json`))
             window.localStorage.removeItem('hu60bot_chat_list.json')
             initChatWindowData()
-            document.querySelectorAll('#chatList li')
-                .forEach(chatItem => chatItem.addEventListener('click', e=>{
-                    document.querySelector('#chatWindow').style.display = 'block'
-                    document.querySelector('#chatList').style.display = 'none'
-                }))
         })
     
     initChatWindowData()
@@ -103,6 +98,13 @@ function renderChatList() {
             }
             appendChatList(chat, {updateStorage: false,focused: window.hu60_chatwindow == chat.uid})
         })
+    }
+    if(window.innerWidth < 1080) {
+        document.querySelectorAll('#chatList li')
+            .forEach(chatItem => chatItem.addEventListener('click', e=>{
+                document.querySelector('#chatWindow').style.display = 'block'
+                document.querySelector('#chatList').style.display = 'none'
+            }))
     }
 }
 

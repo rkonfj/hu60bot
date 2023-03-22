@@ -4,8 +4,8 @@ window.hu60_res_loading_icon = '/q.php/api.webplug-file/22780_public_loading.svg
 window.hu60_res_exit_chat_icon = '/q.php/api.webplug-file/22780_public_exit_window.svg'
 window.hu60_res_clear_icon = '/q.php/api.webplug-file/22780_public_cancel_icon.svg'
 window.hu60_res_clear_all_icon = '/q.php/api.webplug-file/22780_public_qingkong_icon.svg'
+window.hu60_res_source_link_icon = '/q.php/api.webplug-file/22780_public_source_link_icon.svg'
 window.hu60_res_robot_icon = 'https://file.hu60.cn/avatar/-50.jpg'
-window.hu60_site_url = 'https://hu60.cn'
 window.hu60_site_file_url = 'https://file.hu60.cn'
 window.hu60_hu60bot_uid = -54
 window.hu60_hu60bot_welcome = '您好，有什么我可以为您效劳的吗？'
@@ -209,7 +209,8 @@ function initChatWindow(chat) {
             }
         } else {
             JSON.parse(convo).forEach(c => {
-                appendChatText(c.words, chat.uid, {self: c.self, updateStorage: false})  
+                appendChatText(c.words, chat.uid, 
+                    {self: c.self, updateStorage: false,msgid: c.msgid})  
             })
         }
         return
@@ -285,7 +286,8 @@ function initChatWindow(chat) {
         }
     } else {
         JSON.parse(convo).forEach(c => 
-            appendChatText(c.words, chat.uid, {self: c.self, updateStorage: false}))
+            appendChatText(c.words, chat.uid, 
+                {self: c.self, updateStorage: false,msgid:c.msgid}))
     }
 }
 
@@ -307,7 +309,7 @@ function appendChatText(words, uid, opts={self: false,updateStorage: true}) {
         }
         
         if(!isRepeat) {
-            convoObj.push({words: words,self: opts.self})
+            convoObj.push({words: words,self: opts.self, msgid: opts.msgid})
             window.localStorage.setItem(`${uid}convo.json`, JSON.stringify(convoObj))
         }
         
@@ -360,7 +362,12 @@ function appendChatText(words, uid, opts={self: false,updateStorage: true}) {
 
     const text = document.createElement("div")
     text.classList.add('hu60bot')
-    text.innerHTML = words
+    let optComp = ""
+    if(opts.msgid) {
+        optComp = `<a class="source-link" href="/q.php/link.ack.msg.${opts.msgid}.html" title="click me">
+            <img src="${window.hu60_res_source_link_icon}" /></a>`
+    }
+    text.innerHTML = `${words}${optComp}`
 
     chatItem.appendChild(avatar)
     chatItem.appendChild(text)
@@ -503,12 +510,12 @@ async function handleMsgSend(words) {
     }
 
     // 发送聊天室消息
-    let chatroom = await (await fetch(window.hu60_site_url + '/q.php/addin.chat.hu60bot.json')).json()
+    let chatroom = await (await fetch('/q.php/addin.chat.hu60bot.json')).json()
     let formData = new FormData()
     formData.append('content', '<!md>\n@#' + currentChatWindowUID + ' ' + words)
     formData.append('token', chatroom.token)
     formData.append('go', '1')
-    fetch(window.hu60_site_url + '/q.php/addin.chat.hu60bot.json', {
+    fetch('/q.php/addin.chat.hu60bot.json', {
         body: formData,
         method: "post",
         redirect: "manual" // 不自动重定向
@@ -549,7 +556,7 @@ function handleWsMsg(msg) {
                         tipsCount: 0
                     }, {updateStorage: true})
                     appendChatText(msgContentText, msg.data.byuid, 
-                        {self: false, updateStorage: true})
+                        {self: false, updateStorage: true, msgid: msg.data.id})
                 })
                 return
             }
@@ -563,7 +570,8 @@ function handleWsMsg(msg) {
                 tipsCount: 0
             }, {updateStorage: true})
         }
-        appendChatText(msgContentText, msg.data.byuid, {self: false, updateStorage: true})
+        appendChatText(msgContentText, msg.data.byuid, 
+            {self: false, updateStorage: true, msgid: msg.data.id})
         return
     }
 

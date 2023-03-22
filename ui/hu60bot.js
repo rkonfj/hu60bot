@@ -449,7 +449,7 @@ function handleWsMsg(msg) {
                 window.hu60_user_info_map = {}
             }
             if (!window.hu60_user_info_map[msg.data.byuid]) {
-                fetch(window.hu60_site_url+'/q.php/user.info.${msg.data.byuid}.json')
+                fetch(`/q.php/user.info.${msg.data.byuid}.json`)
                 .then(res => res.json()).then(jres => {
                     window.hu60_user_info_map[msg.data.byuid] = jres
                     appendChatList({

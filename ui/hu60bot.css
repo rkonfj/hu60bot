@@ -219,6 +219,7 @@
     border-radius: 3px;
     max-width: 70%;
     margin-bottom: 10px;
+    word-break: break-all;
 }
 
 #hu60botChat .chat .cuser {

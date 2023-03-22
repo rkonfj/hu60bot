@@ -377,6 +377,30 @@ function initGlobalListener() {
             document.querySelector('#chatInput button').click()
         }
     })
+
+    setInterval(()=>{
+        const tips = document.querySelectorAll('#chatList .newMsgTips')
+        for(let i =0;i<tips.length;i++) {
+            let tipsCount = parseInt(tips[i].innerText)
+            if(tipsCount>0) {
+                if(window.hu60_new_tips_task) {
+                    return
+                }
+                window.hu60_new_tips_task = setInterval(()=>{
+                    const hu60botPlugin = document.querySelector('#hu60botPlugin')
+                    if(hu60botPlugin.style.opacity == 0) {
+                        hu60botPlugin.style.opacity = 1
+                    } else {
+                        hu60botPlugin.style.opacity = 0
+                    }
+                },500)
+                return
+            }
+        }
+        clearInterval(window.hu60_new_tips_task)
+        document.querySelector('#hu60botPlugin').style.opacity = 1
+        window.hu60_new_tips_task = null
+    },100)
 }
 
 function connectWs() {
@@ -558,8 +582,10 @@ function getHu60MsgText(msgContent) {
           return `<img style="max-width: 90%;display: block" src="${unit.src}" alt="${unit.alt}" />`
       }
   }).join("").trim()
-  if (text.startsWith(',') || text.startsWith('，')) {
-      text = text.substr(1)
+  for(let i =0;i<5;i++) {
+    if (text.startsWith(',') || text.startsWith('，') || text.startsWith('\n')) {
+        text = text.substr(1)
+    }
   }
   console.debug(text)
   return text

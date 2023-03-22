@@ -61,6 +61,14 @@
     display: none;
 }
 
+#chatList ul li .clearChat {
+    float: right;
+    width: 18px;
+    height: 18px;
+    margin: -15px -8px 0 0;
+    display: none;
+}
+
 #chatList ul li .latestMsgOverview {
     width: 220px;
     overflow: hidden;

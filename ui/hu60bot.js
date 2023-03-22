@@ -2,6 +2,7 @@ window.hu60_res_bot_icon = '/q.php/api.webplug-file/22780_public_hu_icon.svg'
 window.hu60_res_back_icon = '/q.php/api.webplug-file/22780_public_return_icon.svg'
 window.hu60_res_loading_icon = '/q.php/api.webplug-file/22780_public_loading.svg'
 window.hu60_res_exit_chat_icon = '/q.php/api.webplug-file/22780_public_exit_window.svg'
+window.hu60_res_clear_icon = '/q.php/api.webplug-file/22780_public_cancel_icon.svg'
 window.hu60_res_robot_icon = 'https://file.hu60.cn/avatar/-50.jpg'
 window.hu60_site_url = 'https://hu60.cn'
 window.hu60_site_file_url = 'https://file.hu60.cn'
@@ -95,8 +96,11 @@ function appendChatList(chat, opts={updateStorage: true, focused: false}) {
         `<span class="newMsgTips">${chat.tipsCount}</span>
         <img class="cavatar" src="${chat.avatar}" />
         ${chat.name}<br />
-        <span class="latestMsgOverview">${chat.overview?chat.overview:""}</span>`
+        <span class="latestMsgOverview">${chat.overview?chat.overview:""}</span>
+        <img class="clearChat" src="${window.hu60_res_clear_icon}" />`
     chatItem.id = `chat-${chat.uid}`
+    chatItem.addEventListener('mouseover', e => chatItem.querySelector('.clearChat').style.display = 'block')
+    chatItem.addEventListener('mouseout', e => chatItem.querySelector('.clearChat').style.display = 'none')
     chatItem.addEventListener('click', e => {
         document.querySelectorAll('#chatList li')
             .forEach( item => item.classList.remove('activeChat'))
@@ -114,6 +118,32 @@ function appendChatList(chat, opts={updateStorage: true, focused: false}) {
             }
         }
         window.localStorage.setItem("hu60bot_chat_list.json", JSON.stringify(hu60botChatList))
+    })
+
+    chatItem.querySelector('.clearChat').addEventListener('click', e=> {
+        if(chat.isRobot) {
+            window.localStorage.removeItem(`${chat.uid}convo.json`)
+            document.querySelector('#chatContainer').innerHTML = ''
+            appendChatText(window.hu60_hu60bot_welcome, chat.uid, 
+                {self: false, updateStorage: true})
+
+            if(chat.uid == window.hu60_hu60bot_uid) {
+                window.hu60_ws.send(JSON.stringify({action: "rmconvo"}))
+            }
+            e.stopPropagation()
+            return
+        }
+        let prevUid = window.hu60_chatwindow
+        let hu60botChatList = JSON.parse(window.localStorage.getItem('hu60bot_chat_list.json'))
+        for(let i =0;i<hu60botChatList.length;i++) {
+            if(hu60botChatList[i].uid == chat.uid) {
+                let elementToMove = hu60botChatList.splice(i, 1)
+                window.localStorage.setItem('hu60bot_chat_list.json', JSON.stringify(hu60botChatList))
+                break
+            }
+        }
+        renderChatList()
+        e.stopPropagation()
     })
 
     if (opts.focused) {
@@ -434,7 +464,7 @@ async function handleMsgSend(words) {
 
 function handleWsMsg(msg) {
     if (msg.event == 'chat') {
-        appendChatText(`${msg.data.newConversation?"[新会话]":""}${setext(msg.data.response)}`,
+        appendChatText(`${msg.data.newConversation?"[新会话] ":""}${setext(msg.data.response)}`,
             window.hu60_hu60bot_uid, 
             {self: false, updateStorage: true})
         return

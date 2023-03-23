@@ -29,6 +29,11 @@ type ConversationManager struct {
 	botMsgChan          chan hu60.Msg
 }
 
+type SeWsEvent struct {
+	Event string `json:"event"`
+	Data  any    `json:"data"`
+}
+
 type WsEvent struct {
 	Event string    `json:"event"`
 	Data  WsHu60Msg `json:"data"`
@@ -128,6 +133,16 @@ func (cm *ConversationManager) connectWs() error {
 		logrus.Infof("bot connect websocket (%s) succeed", cm.options.Hu60WSURL)
 		logrus.Infof("bot watching for chat now. sid is %s, conversation window is %s",
 			cm.botSid, cm.options.ConversationWindow.String())
+		go func(c *websocket.Conn) {
+			for {
+				time.Sleep(time.Minute)
+				logrus.Trace("bot ping...")
+				if err := c.WriteMessage(websocket.TextMessage, []byte(`{"action": "ping"}`)); err != nil {
+					c.Close()
+					break
+				}
+			}
+		}(conn)
 		defer conn.Close()
 		for {
 			_, message, err := conn.ReadMessage()
@@ -136,13 +151,22 @@ func (cm *ConversationManager) connectWs() error {
 				time.Sleep(5 * time.Second)
 				return cm.connectWs()
 			}
+			var seEvent SeWsEvent
+			err = json.Unmarshal(message, &seEvent)
+			if err != nil {
+				logrus.Error("connectWs.ReadMessage: invalid hu60wap6 ws event format: ", err)
+				continue
+			}
+			if seEvent.Event != "msg" {
+				continue
+			}
 			var event WsEvent
 			err = json.Unmarshal(message, &event)
 			if err != nil {
 				logrus.Error("connectWs.ReadMessage: invalid hu60wap6 ws event format: ", err)
 				continue
 			}
-			if event.Event != "msg" || event.Data.Type != 1 {
+			if event.Data.Type != 1 {
 				continue
 			}
 			var c []hu60.MsgContent

@@ -21,7 +21,8 @@ func main() {
 	}
 	cmd.Flags().String("conversation-window", "30m", "conversation valid time. example: 1m, 1h, 1d ...")
 	cmd.Flags().String("log-level", "info", "logging level. example: error, warn, info, debug ...")
-	cmd.Flags().String("hu60api", "https://hu60.cn", "hu60wap6's API URL")
+	cmd.Flags().String("hu60api", "https://hu60.cn", "hu60wap6's api url")
+	cmd.Flags().String("hu60ws", "wss://hu60.cn/ws/msg", "hu60wap6's websocket endpoint url")
 	cmd.Flags().StringP("openai-token", "k", "", "api key for access openai. https://platform.openai.com/account/api-keys")
 	cmd.Flags().String("openai-model", openai.GPT3Dot5Turbo, "id of the openai model to use. https://platform.openai.com/docs/models/overview")
 	cmd.Flags().String("canal-host", "127.0.0.1", "canal host for watching hu60wap6 db")
@@ -67,6 +68,10 @@ func processConversationOptions(cmd *cobra.Command) (options convo.ConversationO
 	}
 
 	options.Hu60APIURL, err = cmd.Flags().GetString("hu60api")
+	if err != nil {
+		return
+	}
+	options.Hu60WSURL, err = cmd.Flags().GetString("hu60ws")
 	if err != nil {
 		return
 	}
@@ -130,26 +135,29 @@ func botAction(cmd *cobra.Command, args []string) error {
 	wg.Add(3)
 
 	conversationManager := convo.NewConversationManager(convoOpts)
+	websocketManager := server.NewWebsocketManager(serverOpts, conversationManager)
+	canalManager := server.NewCanalManager(canalOpts, websocketManager)
+
 	go func() {
 		conversationManager.Run()
 		wg.Done()
 	}()
 
-	websocketManager := server.NewWebsocketManager(serverOpts, conversationManager)
 	go func() {
 		err := websocketManager.Run()
 		if err != nil {
-			logrus.Infof("websocket server is disabled. (%s)", err.Error())
+			logrus.Debugf("websocket server is disabled. (%s)", err.Error())
 		}
 		wg.Done()
 	}()
 
-	canalManager := server.NewCanalManager(canalOpts, websocketManager)
 	go func() {
 		err := canalManager.Run()
 		if err != nil {
-			logrus.Infof("canal is disabled. (%s)", err.Error())
+			logrus.Debugf("canal is disabled. (%s)", err.Error())
 		}
+		conversationManager.OnCanalStartFailed()
+		websocketManager.OnCanalStartFailed()
 		wg.Done()
 	}()
 	wg.Wait()

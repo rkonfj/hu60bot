@@ -25,6 +25,7 @@ type WebsocketManager struct {
 	connMapUpdateLock sync.Mutex
 	cm                *convo.ConversationManager
 	options           ServerOptions
+	depOkSig          chan int
 }
 
 type Hu60Msg struct {
@@ -64,10 +65,11 @@ func NewWebsocketManager(opts ServerOptions, cm *convo.ConversationManager) *Web
 		connMapUpdateLock: sync.Mutex{},
 		cm:                cm,
 		options:           opts,
+		depOkSig:          make(chan int),
 	}
 }
 
-func (m *WebsocketManager) Push(msg *Hu60Msg) error {
+func (m *WebsocketManager) Push(msg *Hu60Msg) {
 	if wsArr, ok := m.connMap[msg.ToUID]; ok {
 		for _, ws := range wsArr {
 			if ws == nil {
@@ -78,9 +80,8 @@ func (m *WebsocketManager) Push(msg *Hu60Msg) error {
 				logrus.Warn("websocketManger push error: ", err)
 			}
 		}
-		return nil
 	} else {
-		return fmt.Errorf("uid %d not online", msg.ToUID)
+		logrus.Infof("uid %d not online, discard msg id=%d", msg.ToUID, msg.ID)
 	}
 }
 
@@ -139,6 +140,9 @@ func checkSameOrigin(r *http.Request) bool {
 }
 
 func (m *WebsocketManager) Run() error {
+	if (<-m.depOkSig) != 1 {
+		return errors.New("dependency canal start failed")
+	}
 	http.HandleFunc("/v1/ws", func(w http.ResponseWriter, r *http.Request) {
 		noCookie := false
 		var header http.Header = make(http.Header)
@@ -193,6 +197,15 @@ func (m *WebsocketManager) Run() error {
 	logrus.Info("bot listening on ", m.options.Listen, " for interact now. websocket endpoint is /v1/ws")
 	return http.ListenAndServe(m.options.Listen, nil)
 }
+
+func (m *WebsocketManager) OnCanalStartSucceed() {
+	m.depOkSig <- 1
+}
+
+func (m *WebsocketManager) OnCanalStartFailed() {
+	m.depOkSig <- 0
+}
+
 func (m *WebsocketManager) validConnCount(uid int) int {
 	validConnCount := len(m.connMap[uid])
 	for _, _ws := range m.connMap[uid] {
@@ -202,6 +215,7 @@ func (m *WebsocketManager) validConnCount(uid int) int {
 	}
 	return validConnCount
 }
+
 func (m *WebsocketManager) connMessageListener(userProfile hu60.GetProfileResponse, ws *websocket.Conn) {
 	for {
 		_, msg, err := ws.ReadMessage()

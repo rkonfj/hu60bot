@@ -628,8 +628,11 @@ function getHu60MsgText(msgContent) {
       if(unit.type == "text") {
           return setext(unit.value)
       }
-        if(unit.type == "mdpre") {
+      if(unit.type == "mdpre") {
           return unit.data
+      }
+      if(unit.type == "face") {
+          return unit.face
       }
       if(unit.type == "mdcode") {
           return unit.quote + unit.lang + unit.data + unit.quote

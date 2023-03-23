@@ -89,7 +89,6 @@ func (cm *ConversationManager) Run() {
 		conversationKey := fmt.Sprintf("%d", msg.ByUID)
 
 		content := getTextMessage(msg.Content)
-		logrus.Debug("getTextMessage: ", content)
 
 		answer, isNewConvo, err := cm.Ask(content, conversationKey)
 		if err != nil {
@@ -223,6 +222,7 @@ func (cm *ConversationManager) OnHu60Msg(msg hu60.Msg) {
 }
 
 func (cm *ConversationManager) Ask(words, conversationKey string) (answer string, isNewConvo bool, err error) {
+	logrus.Debugf("convoKey: %s, askAI request: %s", conversationKey, words)
 	var conversationMsgs []openai.ChatCompletionMessage
 
 	if msgs, ok := cm.conversationContext.Get(conversationKey); ok {
@@ -241,7 +241,7 @@ func (cm *ConversationManager) Ask(words, conversationKey string) (answer string
 	if err != nil {
 		return
 	}
-	logrus.Debug("askAI response: ", answer)
+	logrus.Debugf("convoKey: %s, askAI response: ", conversationKey, answer)
 
 	conversationMsgs = append(conversationMsgs, openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleAssistant,

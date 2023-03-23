@@ -44,6 +44,7 @@ type BotEvent struct {
 }
 
 type BotCmd struct {
+	ID     string `json:"id"`
 	Action string `json:"action"`
 	Data   any    `json:"data"`
 }
@@ -249,6 +250,7 @@ func (m *WebsocketManager) connMessageListener(userProfile hu60.GetProfileRespon
 			m.responseError(ws, err)
 			return
 		}
+		ws.WriteJSON(BotEvent{Event: "ack", Data: cmd.ID})
 		m.processBotAction(cmd, userProfile.Uid, ws)
 	}
 }

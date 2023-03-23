@@ -243,14 +243,15 @@
 #hu60botChat .chat .hu60bot .source-link {
     float: right;
     display: block;
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
+    margin: -1px 0 0 2px;
     animation: beat 2s ease-in-out infinite;
 }
 
 #hu60botChat .chat .hu60bot .source-link img {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
 }
 
 #hu60botChat .chat .cuser {

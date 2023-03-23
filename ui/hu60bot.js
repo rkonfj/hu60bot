@@ -23,6 +23,8 @@ function startPlugin() {
     showPluginDoor()
 
     smallScreenDeviceSafeInit()
+
+    largeScreenDeviceSafeInit()
     
 }
 
@@ -599,6 +601,17 @@ function smallScreenDeviceSafeInit() {
                 document.querySelector('#chatWindow').style.display = 'block'
                 document.querySelector('#chatList').style.display = 'none'
             }))
+    }
+}
+
+function largeScreenDeviceSafeInit() {
+    if (window.innerWidth > 1080) {
+        let hu60botChat = document.querySelector('#hu60botChat')
+        if(window.innerHeight<=720) {
+            hu60botChat.style.bottom = '0px'
+        } else {
+            hu60botChat.style.bottom = `${(window.innerHeight-720)/2}px`
+        }
     }
 }
 

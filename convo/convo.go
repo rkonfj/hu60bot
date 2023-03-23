@@ -94,24 +94,26 @@ func (cm *ConversationManager) Run() {
 }
 
 func (cm *ConversationManager) OnCanalStartFailed() {
-	// websocket
-	wsurl, err := url.Parse(cm.options.Hu60WSURL)
-	if err != nil {
-		logrus.Fatal("invalid hu60wap6's websocket endpoint url")
-	}
-	cm.botReadyTask.Wait()
+	go func() {
+		// websocket
+		wsurl, err := url.Parse(cm.options.Hu60WSURL)
+		if err != nil {
+			logrus.Fatal("invalid hu60wap6's websocket endpoint url")
+		}
+		cm.botReadyTask.Wait()
 
-	err = cm.connectWs()
-	if err == nil {
-		return
-	}
+		err = cm.connectWs()
+		if err == nil {
+			return
+		}
 
-	logrus.Infof("bot connect websocket (%s) error, fallback to http loop", wsurl.String())
-	logrus.Infof("bot watching for chat now. sid is %s, conversation window is %s", cm.botSid, cm.options.ConversationWindow.String())
-	// http loop
-	cm.hu60Client.WatchMsg(context.Background(), cm.botSid, func(msg hu60.Msg) {
-		cm.botMsgChan <- msg
-	})
+		logrus.Infof("bot connect websocket (%s) error, fallback to http loop", wsurl.String())
+		logrus.Infof("bot watching for chat now. sid is %s, conversation window is %s", cm.botSid, cm.options.ConversationWindow.String())
+		// http loop
+		cm.hu60Client.WatchMsg(context.Background(), cm.botSid, func(msg hu60.Msg) {
+			cm.botMsgChan <- msg
+		})
+	}()
 }
 
 func (cm *ConversationManager) OnCanalStartSucceed() {

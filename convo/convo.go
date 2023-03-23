@@ -44,9 +44,11 @@ type WsHu60Msg struct {
 }
 
 func NewConversationManager(options ConversationOptions) *ConversationManager {
+	openaiCfg := openai.DefaultConfig(options.OpenaiToken)
+	openaiCfg.BaseURL = options.OpenaiAPIURL
 	cm := ConversationManager{
 		hu60Client:   hu60.NewClient(options.Hu60APIURL),
-		openaiClient: openai.NewClient(options.OpenaiToken),
+		openaiClient: openai.NewClientWithConfig(openaiCfg),
 		options:      options,
 		conversationContext: cache.NewCache[string, []openai.ChatCompletionMessage]().
 			WithMaxKeys(4096).WithTTL(time.Second * 30),

@@ -58,7 +58,7 @@ func NewConversationManager(options ConversationOptions) *ConversationManager {
 		conversationContext: cache.NewCache[string, []openai.ChatCompletionMessage]().
 			WithMaxKeys(4096).WithTTL(time.Second * 30),
 		botReadyTask: sync.WaitGroup{},
-		botMsgChan:   make(chan hu60.Msg),
+		botMsgChan:   make(chan hu60.Msg, 64),
 	}
 	cm.updateConversationStats()
 	cm.botReadyTask.Add(1)
@@ -79,6 +79,7 @@ func (cm *ConversationManager) Run() {
 	cm.botSid = resp.Sid
 	cm.botUid = resp.Uid
 	cm.botReadyTask.Done()
+	cm.processMissedMsgs()
 	for msg := range cm.botMsgChan {
 		logrus.Debug("watched msg: ", msg)
 		if msg.Content[0].Type != "atMsg" {
@@ -111,6 +112,7 @@ func (cm *ConversationManager) OnCanalStartFailed() {
 
 		err = cm.connectWs()
 		if err == nil {
+			cm.startTheMarkMsgReadTask()
 			return
 		}
 
@@ -124,7 +126,32 @@ func (cm *ConversationManager) OnCanalStartFailed() {
 }
 
 func (cm *ConversationManager) OnCanalStartSucceed() {
+	cm.startTheMarkMsgReadTask()
 	logrus.Infof("bot watching for chat now. conversation window is %s", cm.options.ConversationWindow.String())
+}
+
+func (cm *ConversationManager) processMissedMsgs() {
+	resp, err := cm.hu60Client.ListMsg(context.Background(), cm.botSid, hu60.ListMsgOptions{PageSize: 64})
+	if err != nil {
+		logrus.Warnf("missed msgs process failed. (%w)", err)
+		return
+	}
+	logrus.Debugf("bot processed %d missed msgs", len(resp.MsgList))
+	for i, j := 0, len(resp.MsgList)-1; i < j; i, j = i+1, j-1 {
+		resp.MsgList[i], resp.MsgList[j] = resp.MsgList[j], resp.MsgList[i]
+	}
+	for _, msg := range resp.MsgList {
+		cm.botMsgChan <- msg
+	}
+}
+
+func (cm *ConversationManager) startTheMarkMsgReadTask() {
+	go func() {
+		for {
+			time.Sleep(time.Minute)
+			cm.hu60Client.ListMsg(context.Background(), cm.botSid, hu60.ListMsgOptions{})
+		}
+	}()
 }
 
 func (cm *ConversationManager) connectWs() error {

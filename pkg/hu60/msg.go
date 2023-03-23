@@ -38,8 +38,15 @@ type ListMsgResponse struct {
 	MsgList  []Msg `json:"msgList"`
 }
 
-func (c *Client) ListMsg(ctx context.Context, sid string) (response ListMsgResponse, err error) {
+type ListMsgOptions struct {
+	PageSize int
+}
+
+func (c *Client) ListMsg(ctx context.Context, sid string, opts ListMsgOptions) (response ListMsgResponse, err error) {
 	suffix := fmt.Sprintf("/%s/msg.index.@.no.json?_content=json", sid)
+	if opts.PageSize > 0 {
+		suffix += fmt.Sprintf("&pageSize=%d", opts.PageSize)
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.fullURL(suffix), nil)
 	if err != nil {
 		return
@@ -51,7 +58,7 @@ func (c *Client) ListMsg(ctx context.Context, sid string) (response ListMsgRespo
 func (c *Client) WatchMsg(ctx context.Context, sid string, handler func(msg Msg)) {
 	for {
 		time.Sleep(10 * time.Second)
-		resp, err := c.ListMsg(ctx, sid)
+		resp, err := c.ListMsg(ctx, sid, ListMsgOptions{PageSize: 64})
 		if err != nil {
 			logrus.Error(err.Error())
 			continue

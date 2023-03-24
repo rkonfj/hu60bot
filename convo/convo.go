@@ -111,7 +111,6 @@ func (cm *ConversationManager) OnCanalStartFailed() {
 
 		err = cm.connectWs()
 		if err == nil {
-			cm.startTheMarkMsgReadTask()
 			return
 		}
 
@@ -148,9 +147,26 @@ func (cm *ConversationManager) startTheMarkMsgReadTask() {
 	go func() {
 		for {
 			time.Sleep(time.Minute)
-			cm.hu60Client.ListMsg(context.Background(), cm.botSid, hu60.ListMsgOptions{})
+			r, err := cm.hu60Client.SetMsgIsRead(context.Background(), cm.botSid, 1)
+			if err != nil {
+				logrus.Trace("hu60.setMsgIsRead error: ", err)
+			}
+			logrus.Trace("hu60.setMsgIsRead response: ", r)
 		}
 	}()
+}
+
+func (cm *ConversationManager) startHeartbeatTask(conn *websocket.Conn) {
+	go func(c *websocket.Conn) {
+		for {
+			time.Sleep(65 * time.Second)
+			logrus.Trace(`bot ping... {"action": "ping"}`)
+			if err := c.WriteMessage(websocket.TextMessage, []byte(`{"action": "ping"}`)); err != nil {
+				c.Close()
+				break
+			}
+		}
+	}(conn)
 }
 
 func (cm *ConversationManager) connectWs() error {
@@ -159,16 +175,8 @@ func (cm *ConversationManager) connectWs() error {
 		logrus.Infof("bot connect websocket (%s) succeed", cm.options.Hu60WSURL)
 		logrus.Infof("bot watching for chat now. sid is %s, conversation window is %s",
 			cm.botSid, cm.options.ConversationWindow.String())
-		go func(c *websocket.Conn) {
-			for {
-				time.Sleep(time.Minute)
-				logrus.Trace("bot ping...")
-				if err := c.WriteMessage(websocket.TextMessage, []byte(`{"action": "ping"}`)); err != nil {
-					c.Close()
-					break
-				}
-			}
-		}(conn)
+		cm.startHeartbeatTask(conn)
+		cm.startTheMarkMsgReadTask()
 		defer conn.Close()
 		for {
 			_, message, err := conn.ReadMessage()
@@ -184,6 +192,9 @@ func (cm *ConversationManager) connectWs() error {
 				continue
 			}
 			if seEvent.Event != "msg" {
+				if seEvent.Event == "ping" {
+					logrus.Trace("bot pong ", string(message))
+				}
 				continue
 			}
 			var event WsEvent

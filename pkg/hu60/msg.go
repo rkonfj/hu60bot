@@ -38,6 +38,14 @@ type ListMsgResponse struct {
 	MsgList  []Msg `json:"msgList"`
 }
 
+type ResultT struct {
+	Update int `json:"update"`
+}
+
+type SetMsgIsReadResponse struct {
+	Result ResultT `json:"result"`
+}
+
 type ListMsgOptions struct {
 	PageSize int
 }
@@ -51,6 +59,16 @@ func (c *Client) ListMsg(ctx context.Context, sid string, opts ListMsgOptions) (
 	if err != nil {
 		return
 	}
+	err = c.sendRequest(req, &response)
+	return
+}
+
+func (c *Client) SetMsgIsRead(ctx context.Context, sid string, t int) (response SetMsgIsReadResponse, err error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.fullURL("/api.msg.isread.set.json"), nil)
+	if err != nil {
+		return
+	}
+	req.Header.Add("Cookie", "hu60_sid="+sid)
 	err = c.sendRequest(req, &response)
 	return
 }

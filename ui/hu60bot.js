@@ -634,35 +634,38 @@ startPlugin()
 // -----
 
 function getHu60MsgText(msgContent) {
-    const validUnits = ["text","imgzh","mdpre","mdcode","face"]
-  let text = msgContent.filter(unit => validUnits.includes(unit.type) ).map(unit => {
-      if(unit.type == "text") {
-          return setext(unit.value)
-      }
-      if(unit.type == "mdpre") {
-          return unit.data
-      }
-      if(unit.type == "face") {
-          return `{${unit.face}}`
-      }
-      if(unit.type == "mdcode") {
-          return unit.quote + unit.lang + unit.data + unit.quote
-      }
+    const validUnits = ["text","imgzh","mdpre","mdcode","face","at"]
+    let text = msgContent.filter(unit => validUnits.includes(unit.type) ).map(unit => {
+        if(unit.type == "text") {
+            return setext(unit.value)
+        }
+        if(unit.type == "mdpre") {
+            return unit.data
+        }
+        if(unit.type == "face") {
+            return `{${unit.face}}`
+        }
+        if(unit.type == "mdcode") {
+            return unit.quote + unit.lang + unit.data + unit.quote
+        }
+        if(unit.type == "at") {
+            return `@${unit.tag}(${unit.uid}) `
+        }
         if(unit.type == "imgzh") {
-          return `<img style="max-width: 90%;display: block" src="${unit.src}" alt="${unit.alt}" />`
-      }
-  }).join("").trim()
-  for(let i=0;i<3;i++) {
-    if(text.startsWith('<br />')) {
-        text = text.substr(6)
+            return `<img style="max-width: 90%;display: block" src="${unit.src}" alt="${unit.alt}" />`
+        }
+    }).join("").trim()
+    for(let i=0;i<3;i++) {
+        if(text.startsWith('<br />')) {
+            text = text.substr(6)
+        }
     }
-  }
-  for(let i =0;i<5;i++) {
-    if (text.startsWith(',') || text.startsWith('，') || text.startsWith('\n')) {
-        text = text.substr(1)
+    for(let i =0;i<5;i++) {
+        if (text.startsWith(',') || text.startsWith('，') || text.startsWith('\n')) {
+            text = text.substr(1)
+        }
     }
-  }
-  console.debug(text)
+    console.debug(text)
   return text
 }
 

@@ -65,7 +65,7 @@
     float: right;
     width: 18px;
     height: 18px;
-    margin: -15px -8px 0 0;
+    margin: -20px -8px 0 0;
     display: none;
 }
 
@@ -76,6 +76,9 @@
     height: 22px;
     white-space: nowrap;
     text-overflow: ellipsis;
+    color: #999;
+    margin: 5px 0 0 0;
+    font-size: 14px;
 }
 
 #chatList .hltitle {
@@ -243,15 +246,16 @@
 #hu60botChat .chat .hu60bot .source-link {
     float: right;
     display: block;
-    width: 16px;
-    height: 16px;
-    margin: -1px 0 0 2px;
+    width: 12px;
+    height: 12px;
+    margin-left: 2px;
+    margin-top: -1px;
     animation: beat 2s ease-in-out infinite;
 }
 
 #hu60botChat .chat .hu60bot .source-link img {
-    width: 16px;
-    height: 16px;
+    width: 12px;
+    height: 12px;
 }
 
 #hu60botChat .chat .cuser {
@@ -299,6 +303,16 @@
     #chatWindow {
         width: inherit;
         height: inherit;
+    }
+
+    #chatList ul li {
+        font-size: 18px;
+        height: 50px;
+    }
+
+    #chatList ul li .cavatar {
+        width: 50px;
+        height: 50px;
     }
 
     #chatList ul li .clearChat {
@@ -364,7 +378,7 @@
         transform: scale(1);
     }
     25% {
-        transform: scale(1.3);
+        transform: scale(1.2);
     }
     50% {
         transform: scale(1);

@@ -496,7 +496,7 @@ async function handleMsgSend(words) {
     }
     if(currentChatWindowUID == window.hu60_hu60bot_uid) {
         try {
-            window.hu60_ws.send(JSON.stringify({action: "chat", data: words}))
+            window.hu60_ws.send(JSON.stringify({action: "chat", data: words, id: "chat"}))
         } catch(e) {
           	log.debug(JSON.stringify(e))
             appendChatText("WS_SEND_ERR: " + JSON.stringify(e), window.hu60_chatwindow, 
@@ -524,7 +524,7 @@ async function handleMsgSend(words) {
     }).then(res => res.json()).then(jres => {
         console.log(JSON.stringify(jres))
         if(jres.success) {
-            document.querySelectorAll('.send_status_icon').forEach(icon => icon.style.cssText='display: none')
+            document.querySelectorAll('.send_status_icon').forEach(icon => icon.style.display='none')
         }
     })
 }
@@ -534,6 +534,13 @@ function handleWsMsg(msg) {
         appendChatText(`${msg.data.newConversation?"[新会话] ":""}${setext(msg.data.response)}`,
             window.hu60_hu60bot_uid, 
             {self: false, updateStorage: true})
+        return
+    }
+
+    if(msg.event == 'ack') {
+        if(msg.data == 'chat') {
+            document.querySelectorAll('.send_status_icon').forEach(icon => icon.style.animationDuration = '0.5s')
+        }
         return
     }
 
@@ -623,7 +630,7 @@ startPlugin()
 // -----
 
 function getHu60MsgText(msgContent) {
-    const validUnits = ["text","imgzh","mdpre"]
+    const validUnits = ["text","imgzh","mdpre","mdcode","face"]
   let text = msgContent.filter(unit => validUnits.includes(unit.type) ).map(unit => {
       if(unit.type == "text") {
           return setext(unit.value)
@@ -632,7 +639,7 @@ function getHu60MsgText(msgContent) {
           return unit.data
       }
       if(unit.type == "face") {
-          return unit.face
+          return `{${unit.face}}`
       }
       if(unit.type == "mdcode") {
           return unit.quote + unit.lang + unit.data + unit.quote

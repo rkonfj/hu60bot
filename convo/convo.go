@@ -84,7 +84,7 @@ func (cm *ConversationManager) Run() {
 		logrus.Debug("watched msg: ", msg)
 		if msg.Content[0].Type != "atMsg" {
 			logrus.Warn("skip non @ msg")
-			return
+			continue
 		}
 		conversationKey := fmt.Sprintf("%d", msg.ByUID)
 
@@ -94,7 +94,7 @@ func (cm *ConversationManager) Run() {
 		if err != nil {
 			logrus.Error("askAI error: ", err.Error())
 			answerHu60(cm.hu60Client, resp.Sid, msg, err.Error(), isNewConvo)
-			return
+			continue
 		}
 		answerHu60(cm.hu60Client, resp.Sid, msg, answer, isNewConvo)
 	}

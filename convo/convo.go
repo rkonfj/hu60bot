@@ -252,7 +252,7 @@ func (cm *ConversationManager) Ask(words, conversationKey string) (answer string
 	if err != nil {
 		return
 	}
-	logrus.Debugf("convoKey: %s, askAI response: ", conversationKey, answer)
+	logrus.Debugf("convoKey: %s, askAI response: %s", conversationKey, answer)
 
 	conversationMsgs = append(conversationMsgs, openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleAssistant,

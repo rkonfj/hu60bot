@@ -5,6 +5,7 @@ window.hu60_res_exit_chat_icon = '/q.php/api.webplug-file/22780_public_exit_wind
 window.hu60_res_clear_icon = '/q.php/api.webplug-file/22780_public_cancel_icon.svg'
 window.hu60_res_clear_all_icon = '/q.php/api.webplug-file/22780_public_qingkong_icon.svg'
 window.hu60_res_source_link_icon = '/q.php/api.webplug-file/22780_public_source_link_icon.svg'
+window.hu60_res_default_avatar = '/upload/default.jpg'
 window.hu60_res_robot_icon = 'https://file.hu60.cn/avatar/-50.jpg'
 window.hu60_site_file_url = 'https://file.hu60.cn'
 window.hu60_hu60bot_uid = -54
@@ -380,6 +381,7 @@ function appendChatText(words, uid, opts={self: false,updateStorage: true}) {
         text.classList.add('cuser')
         text.innerText = words
         avatar.src = `${window.hu60_site_file_url}/avatar/${window.hu60_uid}.jpg`
+        avatar.addEventListener('error', (e) => avatar.src = window.hu60_res_default_avatar)
 
         if(opts.updateStorage) {
             const icon = document.createElement("img")
@@ -412,7 +414,6 @@ function hu60botWindowOp(open) {
     document.querySelector('footer').style.display= 'block'
     document.querySelector('#hu60botChat').style.display = 'none'
 }
-
 
 function initGlobalListener() {
     document.addEventListener("keydown", function(event){

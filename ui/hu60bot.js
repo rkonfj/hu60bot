@@ -43,18 +43,21 @@ function initCurrentUserInfo() {
 
 function initHu60botChat() {
     let hu60botChatBaseHTML = 
-        `<div id="hu60botChat">
-            <div id="chatList">
-                <div class="hltitle">
-                    <span class="hu60botwsstatus" title="disconnected"></span>
-                    <img src="${window.hu60_res_exit_chat_icon}" class="hu60botminwindow" title="minimize"/>
-                    <img src="${window.hu60_res_clear_all_icon}" class="hu60botclearall hu60botmenuicon" title="clear all conversation" />
-                </div>
-                <ul></ul>
+        `<div id="chatList">
+            <div class="hltitle">
+                <span class="hu60botwsstatus" title="disconnected"></span>
+                <img src="${window.hu60_res_exit_chat_icon}" class="hu60botminwindow" title="minimize"/>
+                <img src="${window.hu60_res_clear_all_icon}" class="hu60botclearall hu60botmenuicon" title="clear all conversation" />
             </div>
-            <div id="chatWindow"></div>
-        </div>`
-    document.body.innerHTML += hu60botChatBaseHTML
+            <ul></ul>
+        </div>
+        <div id="chatWindow"></div>`
+    
+    let hu60botChatRoot = document.createElement('div')
+    hu60botChatRoot.id = 'hu60botChat'
+    hu60botChatRoot.innerHTML = hu60botChatBaseHTML
+
+    document.body.appendChild(hu60botChatRoot)
   	
     document.querySelector('#hu60botChat .hu60botminwindow')
         .addEventListener('click', e => hu60botWindowOp(false))

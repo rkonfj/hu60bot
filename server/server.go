@@ -49,6 +49,11 @@ type BotCmd struct {
 	Data   any    `json:"data"`
 }
 
+type UserOnlineStatus struct {
+	UID   int `json:"uid"`
+	Count int `json:"count"`
+}
+
 type ChatResponse struct {
 	NewConversation bool   `json:"newConversation"`
 	Response        string `json:"response"`
@@ -192,11 +197,23 @@ func (m *WebsocketManager) Run() error {
 		m.connMapUpdateLock.Unlock()
 		logrus.Infof("user %s is connected, there are currently %d connections",
 			res.Name, m.validConnCount(res.Uid))
-
+		m.broadcast(BotEvent{Event: "online", Data: UserOnlineStatus{
+			UID:   res.Uid,
+			Count: m.validConnCount(res.Uid),
+		}})
 		go m.connMessageListener(res, ws)
 	})
 	logrus.Info("bot listening on ", m.options.Listen, " for interact now. websocket endpoint is /v1/ws")
 	return http.ListenAndServe(m.options.Listen, nil)
+}
+
+func (m *WebsocketManager) broadcast(event BotEvent) {
+	for _, v := range m.connMap {
+		for _, ws := range v {
+			ws.WriteJSON(BotCmd{})
+			// ignore error, we only broadcast to valid connections
+		}
+	}
 }
 
 func (m *WebsocketManager) OnCanalStartSucceed() {
@@ -242,6 +259,10 @@ func (m *WebsocketManager) connMessageListener(userProfile hu60.GetProfileRespon
 			m.connMapUpdateLock.Unlock()
 			logrus.Infof("user %s is disconnected, there are currently %d connections",
 				userProfile.Name, validConnCount)
+			m.broadcast(BotEvent{Event: "offline", Data: UserOnlineStatus{
+				UID:   userProfile.Uid,
+				Count: validConnCount,
+			}})
 			break
 		}
 		var cmd BotCmd

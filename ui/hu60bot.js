@@ -27,6 +27,30 @@ function startPlugin() {
 
     largeScreenDeviceSafeInit()
     
+    checkUnreadMsgs()
+}
+
+function checkUnreadMsgs() {
+    let formData = new FormData()
+    formData.append('data', '{"type":1}')
+    fetch('/q.php/api.msg.isread.get.json', {
+        body: formData,
+        method: "post"
+    }).then(res => res.json()).then(jres => {
+        console.log(JSON.stringify(jres))
+        if(Object.keys(jres.result).length == 0) {
+            document.querySelectorAll('#chatList li').forEach(chatItem => {
+                let newMsgTips = chatItem.querySelector('.newMsgTips')
+                newMsgTips.innerText = '0'
+                newMsgTips.style.display = 'none'
+            })
+            let hu60botChatList = JSON.parse(window.localStorage.getItem("hu60bot_chat_list.json"))
+            for(let i =0;i<hu60botChatList.length;i++) {
+                hu60botChatList[i].tipsCount = 0
+            }
+            window.localStorage.setItem("hu60bot_chat_list.json", JSON.stringify(hu60botChatList))
+        }
+    })
 }
 
 function initCurrentUserInfo() {

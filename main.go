@@ -29,6 +29,7 @@ func main() {
 	cmd.Flags().String("canal-host", "127.0.0.1", "canal host for watching hu60wap6 db")
 	cmd.Flags().Int("canal-port", 11111, "canal port for watching hu60wap6 db")
 	cmd.Flags().String("canal-client-destination", "hu60bot", "canal client destination for watching hu60wap6 db")
+	cmd.Flags().StringSlice("disable-action", []string{}, "disable bot action. can be specified multiple times to disable multiple actions")
 
 	cmd.Flags().StringP("hu60user", "u", "", "robot username for login hu60wap6")
 	cmd.Flags().StringP("hu60pass", "p", "", "robot password for login hu60wap6")
@@ -102,6 +103,10 @@ func processConversationOptions(cmd *cobra.Command) (options convo.ConversationO
 
 func processServerOptions(cmd *cobra.Command) (options server.ServerOptions, err error) {
 	options.Hu60wap6APIURL, err = cmd.Flags().GetString("hu60api")
+	if err != nil {
+		return
+	}
+	options.DisabledActions, err = cmd.Flags().GetStringSlice("disable-action")
 	if err != nil {
 		return
 	}

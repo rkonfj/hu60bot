@@ -16,6 +16,7 @@ import (
 	"github.com/rkonfj/hu60bot/convo"
 	"github.com/rkonfj/hu60bot/pkg/hu60"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/exp/slices"
 )
 
 type WebsocketManager struct {
@@ -265,14 +266,7 @@ func (m *WebsocketManager) connMessageListener(userProfile hu60.GetProfileRespon
 				userProfile.Name, validConnCount)
 			break
 		}
-		var cmd BotCmd
-		err = json.NewDecoder(strings.NewReader(string(msg))).Decode(&cmd)
-		if err != nil {
-			m.responseError(ws, err)
-			return
-		}
-		ws.WriteJSON(BotEvent{Event: "ack", Data: cmd.ID})
-		m.processBotAction(cmd, userProfile.Uid, ws)
+		m.processBotAction(ws, msg, userProfile.Uid)
 	}
 }
 
@@ -289,34 +283,21 @@ func (m *WebsocketManager) responseError(ws *websocket.Conn, err error) {
 	}
 }
 
-func (m *WebsocketManager) processBotAction(cmd BotCmd, uid int, ws *websocket.Conn) {
-	if cmd.Action == "chat" {
-		conversationKey := fmt.Sprintf("%d", uid)
-		if d, ok := cmd.Data.(string); ok {
-			responseText, newConversation, err := m.cm.Ask(d, conversationKey)
-			cr := ChatResponse{
-				NewConversation: newConversation,
-				Response:        responseText,
-			}
-			if err != nil {
-				cr = ChatResponse{
-					NewConversation: true,
-					Response:        err.Error(),
-				}
-			}
-			ws.WriteJSON(BotEvent{Event: "chat", Data: cr})
+func (m *WebsocketManager) processBotAction(ws *websocket.Conn, msg []byte, uid int) {
+	var cmd BotCmd
+	err := json.NewDecoder(strings.NewReader(string(msg))).Decode(&cmd)
+	if err != nil {
+		m.responseError(ws, err)
+		return
+	}
+	ws.WriteJSON(BotEvent{Event: "ack", Data: cmd.ID})
+	if action, ok := actions[cmd.Action]; ok {
+		if slices.Contains(m.options.DisabledActions, cmd.Action) {
+			m.responseError(ws, fmt.Errorf("disabled action: %s", cmd.Action))
+			return
 		}
+		action(m, ws, cmd, uid)
 		return
 	}
-	if cmd.Action == "rmconvo" {
-		conversationKey := fmt.Sprintf("%d", uid)
-		m.cm.MarkExpired(conversationKey)
-		ws.WriteJSON(BotEvent{Event: "rmconvo", Data: "ok"})
-		return
-	}
-	if cmd.Action == "ping" {
-		ws.WriteJSON(BotEvent{Event: "ping", Data: "pong"})
-		return
-	}
-	m.responseError(ws, errors.New("unsupported action"))
+	m.responseError(ws, fmt.Errorf("unsupported action: %s", cmd.Action))
 }

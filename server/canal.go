@@ -40,8 +40,9 @@ func (m *CanalManager) Run() error {
 
 		message, err := m.connector.Get(100, nil, nil)
 		if err != nil {
-			logrus.Error(err)
+			logrus.Fatalf("bot exited. canal disconnected(%s)", err)
 		}
+
 		batchId := message.Id
 		if batchId == -1 || len(message.Entries) <= 0 {
 			time.Sleep(2000 * time.Millisecond)

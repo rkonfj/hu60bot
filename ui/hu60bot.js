@@ -427,19 +427,22 @@ function appendChatText(words, uid, opts={self: false,updateStorage: true}) {
 }
 
 function hu60botWindowOp(open) {
-    if(open) {
-      	document.querySelector('header').style.display = 'none'
-        document.querySelector('.container').style.display = 'none'
-        document.querySelector('footer').style.display = 'none'
-        document.querySelector('#hu60botChat').style.display = 'flex'
-        let chatContainer = document.querySelector('#chatContainer') 
-        chatContainer.scrollTop = chatContainer.scrollHeight
-        return
-    }
-  	document.querySelector('header').style.display= 'block'
-    document.querySelector('.container').style.display= 'block'
-    document.querySelector('footer').style.display= 'block'
-    document.querySelector('#hu60botChat').style.display = 'none'
+    try{
+        if(open) {
+            document.querySelector('header').style.display = 'none'
+          document.querySelector('.container').style.display = 'none'
+          document.querySelector('footer').style.display = 'none'
+          document.querySelector('#hu60botChat').style.display = 'flex'
+          let chatContainer = document.querySelector('#chatContainer') 
+          chatContainer.scrollTop = chatContainer.scrollHeight
+          return
+      }
+        document.querySelector('header').style.display= 'block'
+      document.querySelector('.container').style.display= 'block'
+      document.querySelector('footer').style.display= 'block'
+      document.querySelector('#hu60botChat').style.display = 'none'
+    }catch(_) {alert("当前不支持该主题")}
+
 }
 
 function initGlobalListener() {

@@ -1,0 +1,11 @@
+.robotstatus {
+    width: 10px;
+    height: 10px;
+    display: block;
+    background: #ccc;
+    border-radius: 50%;
+    position: absolute;
+    right: 1px;
+    bottom: 1px;
+    box-shadow: 0 0 2px #222;
+}

@@ -12,6 +12,7 @@ Flags:
       --canal-host string                 canal host for watching hu60wap6 db (default "127.0.0.1")
       --canal-port int                    canal port for watching hu60wap6 db (default 11111)
       --conversation-window string        conversation valid time. example: 1m, 1h, 1d ... (default "30m")
+      --disable-action strings            disable bot action. can be specified multiple times to disable multiple actions
   -h, --help                              help for hu60bot
       --hu60api string                    hu60wap6's api url (default "https://hu60.cn")
   -p, --hu60pass string                   robot password for login hu60wap6

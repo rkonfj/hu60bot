@@ -26,6 +26,7 @@ func main() {
 	cmd.Flags().StringP("openai-token", "k", "", "api key for access openai. https://platform.openai.com/account/api-keys")
 	cmd.Flags().String("openai-model", openai.GPT3Dot5Turbo, "id of the openai model to use. https://platform.openai.com/docs/models/overview")
 	cmd.Flags().String("openai-api", "https://api.openai.com/v1", "openai's api url with version")
+	cmd.Flags().String("openai-timeout", "65s", "timeout for requesting openai api")
 	cmd.Flags().String("canal-host", "127.0.0.1", "canal host for watching hu60wap6 db")
 	cmd.Flags().Int("canal-port", 11111, "canal port for watching hu60wap6 db")
 	cmd.Flags().String("canal-client-destination", "hu60bot", "canal client destination for watching hu60wap6 db")
@@ -91,6 +92,17 @@ func processConversationOptions(cmd *cobra.Command) (options convo.ConversationO
 	options.OpenaiAPIURL, err = cmd.Flags().GetString("openai-api")
 	if err != nil {
 		return
+	}
+
+	openaiRequestDurationStr, err := cmd.Flags().GetString("openai-timeout")
+	if err != nil {
+		return
+	}
+
+	if openaiRequestDuration, err := time.ParseDuration(openaiRequestDurationStr); err != nil {
+		return options, err
+	} else {
+		options.OpenaiRequestTimeout = openaiRequestDuration
 	}
 
 	options.Hu60Username, err = cmd.Flags().GetString("hu60user")

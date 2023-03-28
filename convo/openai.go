@@ -7,8 +7,8 @@ import (
 	openai "github.com/sashabaranov/go-openai"
 )
 
-func askAI(client *openai.Client, model string, msgs []openai.ChatCompletionMessage) (string, openai.Usage, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 65*time.Second)
+func askAI(client *openai.Client, model string, reqTimeout time.Duration, msgs []openai.ChatCompletionMessage) (string, openai.Usage, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
 	defer cancel()
 	resp, err := client.CreateChatCompletion(
 		ctx, openai.ChatCompletionRequest{

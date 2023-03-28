@@ -22,5 +22,6 @@ Flags:
       --log-level string                  logging level. example: error, warn, info, debug ... (default "info")
       --openai-api string                 openai's api url with version (default "https://api.openai.com/v1")
       --openai-model string               id of the openai model to use. https://platform.openai.com/docs/models/overview (default "gpt-3.5-turbo")
+      --openai-timeout string             timeout for requesting openai api (default "65s")
   -k, --openai-token string               api key for access openai. https://platform.openai.com/account/api-keys
 ```

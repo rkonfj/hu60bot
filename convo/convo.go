@@ -248,7 +248,7 @@ func (cm *ConversationManager) Ask(words, conversationKey string) (answer string
 		Content: words,
 	})
 
-	answer, usage, err := askAI(cm.openaiClient, cm.options.OpenaiModel, conversationMsgs)
+	answer, usage, err := askAI(cm.openaiClient, cm.options.OpenaiModel, cm.options.OpenaiRequestTimeout, conversationMsgs)
 	if err != nil {
 		return
 	}

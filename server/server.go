@@ -20,13 +20,14 @@ import (
 )
 
 type WebsocketManager struct {
-	upgrader          websocket.Upgrader
-	hu60Client        *hu60.Client
-	connMap           map[int][]*websocket.Conn
-	connMapUpdateLock sync.Mutex
-	cm                *convo.ConversationManager
-	options           ServerOptions
-	depOkSig          chan int
+	upgrader              websocket.Upgrader
+	hu60Client            *hu60.Client
+	connMap               map[int][]*websocket.Conn
+	connMapUpdateLock     sync.Mutex
+	cm                    *convo.ConversationManager
+	options               ServerOptions
+	depOkSig              chan int
+	userOnlineStatusChain chan BotEvent
 }
 
 type Hu60Msg struct {
@@ -67,12 +68,13 @@ func NewWebsocketManager(opts ServerOptions, cm *convo.ConversationManager) *Web
 				return true
 			},
 		},
-		hu60Client:        hu60.NewClient(opts.Hu60wap6APIURL),
-		connMap:           make(map[int][]*websocket.Conn),
-		connMapUpdateLock: sync.Mutex{},
-		cm:                cm,
-		options:           opts,
-		depOkSig:          make(chan int),
+		hu60Client:            hu60.NewClient(opts.Hu60wap6APIURL),
+		connMap:               make(map[int][]*websocket.Conn),
+		connMapUpdateLock:     sync.Mutex{},
+		cm:                    cm,
+		options:               opts,
+		depOkSig:              make(chan int),
+		userOnlineStatusChain: make(chan BotEvent, 1024),
 	}
 }
 
@@ -191,10 +193,10 @@ func (m *WebsocketManager) Run() error {
 			return
 		}
 		m.connMapUpdateLock.Lock()
-		m.broadcast(BotEvent{Event: "online", Data: UserOnlineStatus{
+		m.userOnlineStatusChain <- BotEvent{Event: "online", Data: UserOnlineStatus{
 			UID:   res.Uid,
 			Count: m.validConnCount(res.Uid),
-		}})
+		}}
 		if _, ok := m.connMap[res.Uid]; !ok {
 			m.connMap[res.Uid] = []*websocket.Conn{}
 		}
@@ -204,6 +206,7 @@ func (m *WebsocketManager) Run() error {
 			res.Name, m.validConnCount(res.Uid))
 		go m.connMessageListener(res, ws)
 	})
+	m.startUserOnlineStatusBroadcastTask()
 	logrus.Info("bot listening on ", m.options.Listen, " for interact now. websocket endpoint is /v1/ws")
 	return http.ListenAndServe(m.options.Listen, nil)
 }
@@ -215,6 +218,15 @@ func (m *WebsocketManager) broadcast(event BotEvent) {
 			// ignore error, we only broadcast to valid connections
 		}
 	}
+}
+
+func (m *WebsocketManager) startUserOnlineStatusBroadcastTask() {
+	go func() {
+		defer close(m.userOnlineStatusChain)
+		for stat := range m.userOnlineStatusChain {
+			m.broadcast(stat)
+		}
+	}()
 }
 
 func (m *WebsocketManager) OnCanalStartSucceed() {
@@ -257,10 +269,10 @@ func (m *WebsocketManager) connMessageListener(userProfile hu60.GetProfileRespon
 			if validConnCount == 0 {
 				delete(m.connMap, userProfile.Uid)
 			}
-			m.broadcast(BotEvent{Event: "offline", Data: UserOnlineStatus{
+			m.userOnlineStatusChain <- BotEvent{Event: "offline", Data: UserOnlineStatus{
 				UID:   userProfile.Uid,
 				Count: validConnCount,
-			}})
+			}}
 			m.connMapUpdateLock.Unlock()
 			logrus.Infof("user %s is disconnected, there are currently %d connections",
 				userProfile.Name, validConnCount)

@@ -485,6 +485,7 @@ function connectWs() {
         let wsStatus = document.querySelector('#chatList .hu60botwsstatus')
         wsStatus.style.cssText = 'background: green'
         wsStatus.title = 'connected'
+        window.hu60_ws.send(JSON.stringify({action: 'lsol'}))
     })
     ws.addEventListener("close", e => {
         clearInterval(window._hu60bot_hb_task)
@@ -569,6 +570,20 @@ function handleWsMsg(msg) {
         if(msg.data == 'chat') {
             document.querySelectorAll('.send_status_icon').forEach(icon => icon.style.animationDuration = '0.5s')
         }
+        return
+    }
+
+    if(msg.event == 'lsol') {
+        window.hu60_hu60bot_online_user = msg.data
+        window.hu60_hu60bot_online_user[window.hu60_hu60bot_uid] = 1
+        return
+    }
+
+    if(msg.event == 'online' || msg.event == 'offline') {
+        if(!window.hu60_hu60bot_online_user) {
+            return
+        }
+        window.hu60_hu60bot_online_user[msg.data.uid] = msg.data.count
         return
     }
 

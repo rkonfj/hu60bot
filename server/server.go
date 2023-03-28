@@ -193,15 +193,15 @@ func (m *WebsocketManager) Run() error {
 			return
 		}
 		m.connMapUpdateLock.Lock()
-		m.userOnlineStatusChain <- BotEvent{Event: "online", Data: UserOnlineStatus{
-			UID:   res.Uid,
-			Count: m.validConnCount(res.Uid),
-		}}
 		if _, ok := m.connMap[res.Uid]; !ok {
 			m.connMap[res.Uid] = []*websocket.Conn{}
 		}
 		m.connMap[res.Uid] = append(m.connMap[res.Uid], ws)
 		m.connMapUpdateLock.Unlock()
+		m.userOnlineStatusChain <- BotEvent{Event: "online", Data: UserOnlineStatus{
+			UID:   res.Uid,
+			Count: m.validConnCount(res.Uid),
+		}}
 		logrus.Infof("user %s is connected, there are currently %d connections",
 			res.Name, m.validConnCount(res.Uid))
 		go m.connMessageListener(res, ws)
@@ -212,6 +212,11 @@ func (m *WebsocketManager) Run() error {
 }
 
 func (m *WebsocketManager) broadcast(event BotEvent) {
+	defer func() {
+		if err := recover(); err != nil {
+			logrus.Warn("panic occurred: ", err)
+		}
+	}()
 	for _, v := range m.connMap {
 		for _, ws := range v {
 			ws.WriteJSON(event)
@@ -269,11 +274,11 @@ func (m *WebsocketManager) connMessageListener(userProfile hu60.GetProfileRespon
 			if validConnCount == 0 {
 				delete(m.connMap, userProfile.Uid)
 			}
+			m.connMapUpdateLock.Unlock()
 			m.userOnlineStatusChain <- BotEvent{Event: "offline", Data: UserOnlineStatus{
 				UID:   userProfile.Uid,
 				Count: validConnCount,
 			}}
-			m.connMapUpdateLock.Unlock()
 			logrus.Infof("user %s is disconnected, there are currently %d connections",
 				userProfile.Name, validConnCount)
 			break

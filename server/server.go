@@ -190,6 +190,10 @@ func (m *WebsocketManager) Run() error {
 			return
 		}
 		m.connMapUpdateLock.Lock()
+		m.broadcast(BotEvent{Event: "online", Data: UserOnlineStatus{
+			UID:   res.Uid,
+			Count: m.validConnCount(res.Uid),
+		}})
 		if _, ok := m.connMap[res.Uid]; !ok {
 			m.connMap[res.Uid] = []*websocket.Conn{}
 		}
@@ -197,10 +201,6 @@ func (m *WebsocketManager) Run() error {
 		m.connMapUpdateLock.Unlock()
 		logrus.Infof("user %s is connected, there are currently %d connections",
 			res.Name, m.validConnCount(res.Uid))
-		m.broadcast(BotEvent{Event: "online", Data: UserOnlineStatus{
-			UID:   res.Uid,
-			Count: m.validConnCount(res.Uid),
-		}})
 		go m.connMessageListener(res, ws)
 	})
 	logrus.Info("bot listening on ", m.options.Listen, " for interact now. websocket endpoint is /v1/ws")
@@ -210,7 +210,7 @@ func (m *WebsocketManager) Run() error {
 func (m *WebsocketManager) broadcast(event BotEvent) {
 	for _, v := range m.connMap {
 		for _, ws := range v {
-			ws.WriteJSON(BotCmd{})
+			ws.WriteJSON(event)
 			// ignore error, we only broadcast to valid connections
 		}
 	}
@@ -256,13 +256,13 @@ func (m *WebsocketManager) connMessageListener(userProfile hu60.GetProfileRespon
 			if validConnCount == 0 {
 				delete(m.connMap, userProfile.Uid)
 			}
-			m.connMapUpdateLock.Unlock()
-			logrus.Infof("user %s is disconnected, there are currently %d connections",
-				userProfile.Name, validConnCount)
 			m.broadcast(BotEvent{Event: "offline", Data: UserOnlineStatus{
 				UID:   userProfile.Uid,
 				Count: validConnCount,
 			}})
+			m.connMapUpdateLock.Unlock()
+			logrus.Infof("user %s is disconnected, there are currently %d connections",
+				userProfile.Name, validConnCount)
 			break
 		}
 		var cmd BotCmd

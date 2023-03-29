@@ -212,15 +212,17 @@ func (m *WebsocketManager) Run() error {
 }
 
 func (m *WebsocketManager) broadcast(event BotEvent) {
-	defer func() {
-		if err := recover(); err != nil {
-			logrus.Warn("panic occurred: ", err)
-		}
-	}()
 	for _, v := range m.connMap {
 		for _, ws := range v {
-			ws.WriteJSON(event)
-			// ignore error, we only broadcast to valid connections
+			go func(ws *websocket.Conn) {
+				defer func() {
+					if err := recover(); err != nil {
+						logrus.Trace("ws conn already closed")
+					}
+				}()
+				ws.WriteJSON(event)
+				// ignore error, we only broadcast to valid connections
+			}(ws)
 		}
 	}
 }

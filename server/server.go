@@ -198,10 +198,12 @@ func (m *WebsocketManager) Run() error {
 		}
 		m.connMap[res.Uid] = append(m.connMap[res.Uid], ws)
 		m.connMapUpdateLock.Unlock()
-		m.userOnlineStatusChain <- BotEvent{Event: "online", Data: UserOnlineStatus{
-			UID:   res.Uid,
-			Count: m.validConnCount(res.Uid),
-		}}
+		if res.Uid < 0 {
+			m.userOnlineStatusChain <- BotEvent{Event: "online", Data: UserOnlineStatus{
+				UID:   res.Uid,
+				Count: m.validConnCount(res.Uid),
+			}}
+		}
 		logrus.Infof("user %s is connected, there are currently %d connections",
 			res.Name, m.validConnCount(res.Uid))
 		go m.connMessageListener(res, ws)
@@ -277,10 +279,12 @@ func (m *WebsocketManager) connMessageListener(userProfile hu60.GetProfileRespon
 				delete(m.connMap, userProfile.Uid)
 			}
 			m.connMapUpdateLock.Unlock()
-			m.userOnlineStatusChain <- BotEvent{Event: "offline", Data: UserOnlineStatus{
-				UID:   userProfile.Uid,
-				Count: validConnCount,
-			}}
+			if userProfile.Uid < 0 {
+				m.userOnlineStatusChain <- BotEvent{Event: "offline", Data: UserOnlineStatus{
+					UID:   userProfile.Uid,
+					Count: validConnCount,
+				}}
+			}
 			logrus.Infof("user %s is disconnected, there are currently %d connections",
 				userProfile.Name, validConnCount)
 			break
@@ -309,7 +313,9 @@ func (m *WebsocketManager) processBotAction(ws *websocket.Conn, msg []byte, uid 
 		m.responseError(ws, err)
 		return
 	}
-	ws.WriteJSON(BotEvent{Event: "ack", Data: cmd.ID})
+	if cmd.ID != "" {
+		ws.WriteJSON(BotEvent{Event: "ack", Data: cmd.ID})
+	}
 	if action, ok := actions[cmd.Action]; ok {
 		if slices.Contains(m.options.DisabledActions, cmd.Action) {
 			m.responseError(ws, fmt.Errorf("disabled action: %s", cmd.Action))

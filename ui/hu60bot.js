@@ -673,8 +673,28 @@ function smallScreenDeviceSafeInit() {
 function largeScreenDeviceSafeInit() {
     if (window.innerWidth > 1080) {
         let hu60botChat = document.querySelector('#hu60botChat')
+        let chatList = document.querySelector('#chatList')
+        let chatWindow = document.querySelector('#chatWindow')
+        let chatContainer = document.querySelector('#chatContainer')
+        
+
         if(window.innerHeight<=720) {
-            hu60botChat.style.bottom = '0px'
+            hu60botChat.style.bottom = '10px'
+            hu60botChat.style.height = `${window.innerHeight-20}px`
+            chatContainer.style.height = `${window.innerHeight-150}px`
+        } else if((window.innerHeight-720)/2 > 240){
+            let areaHeight = window.innerHeight-240
+            let areaWidth = Math.ceil(areaHeight/720 * 1000)
+            console.log(`areaHeight: ${areaHeight}, areaWidth: ${areaWidth}`)
+            hu60botChat.style.bottom = '120px'
+            hu60botChat.style.height = `${areaHeight}px`
+            hu60botChat.style.width = `${areaWidth}px`
+            chatList.style.width = `${Math.ceil(areaWidth*0.3)}px`
+            chatWindow.style.width = `${areaWidth-Math.ceil(areaWidth*0.3)}px`
+            chatContainer.style.height = `${areaHeight-130}px`
+            chatList.querySelectorAll('ul li .latestMsgOverview').forEach(item => {
+                item.style.width = `${Math.ceil(areaWidth*0.3)-80}px`
+            })
         } else {
             hu60botChat.style.bottom = `${(window.innerHeight-720)/2}px`
         }

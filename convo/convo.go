@@ -250,6 +250,10 @@ func (cm *ConversationManager) Ask(words, conversationKey string) (answer string
 
 	answer, usage, err := askAI(cm.openaiClient, cm.options.OpenaiModel, cm.options.OpenaiRequestTimeout, conversationMsgs)
 	if err != nil {
+		if strings.Contains(err.Error(), "reduce the length") {
+			err = fmt.Errorf("答案丢失！会话长度触限，下一次对话将开启新会话。(%s)", err.Error())
+			cm.MarkExpired(conversationKey)
+		}
 		return
 	}
 	logrus.Debugf("convoKey: %s, askAI response: %s", conversationKey, answer)

@@ -2,20 +2,48 @@ package server
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gorilla/websocket"
+	"golang.org/x/exp/slices"
 )
 
 var (
 	actions map[string]func(wm *WebsocketManager, ws *websocket.Conn, cmd BotCmd, uid int) = make(
 		map[string]func(wm *WebsocketManager, ws *websocket.Conn, cmd BotCmd, uid int))
+
+	startTime time.Time
 )
 
 func init() {
+	startTime = time.Now()
+
+	actions["ls"] = listActionsAction
 	actions["chat"] = chatAction
 	actions["rmconvo"] = removeConvoAction
 	actions["ping"] = pingAction
 	actions["lsol"] = listOnlineUserAction
+	actions["procinf"] = processInfoAction
+}
+
+type ProcessInfo struct {
+	StartedDuration string `json:"started"`
+}
+
+type ActionDescription struct {
+	Name string
+	Desc string
+}
+
+func listActionsAction(wm *WebsocketManager, ws *websocket.Conn, cmd BotCmd, uid int) {
+	var actionNames []string
+	for k := range actions {
+		if slices.Contains(wm.options.DisabledActions, k) {
+			continue
+		}
+		actionNames = append(actionNames, k)
+	}
+	ws.WriteJSON(BotEvent{Event: "ls", Data: actionNames})
 }
 
 func chatAction(wm *WebsocketManager, ws *websocket.Conn, cmd BotCmd, uid int) {
@@ -54,4 +82,10 @@ func listOnlineUserAction(wm *WebsocketManager, ws *websocket.Conn, cmd BotCmd, 
 		onlineData[k] = len(v)
 	}
 	ws.WriteJSON(BotEvent{Event: "lsol", Data: onlineData})
+}
+
+func processInfoAction(wm *WebsocketManager, ws *websocket.Conn, cmd BotCmd, uid int) {
+	ws.WriteJSON(BotEvent{Event: "procinf", Data: ProcessInfo{
+		StartedDuration: time.Since(startTime).String(),
+	}})
 }

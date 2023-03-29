@@ -704,6 +704,9 @@ function getHu60MsgText(msgContent) {
             return unit.quote + unit.lang + unit.data + unit.quote
         }
         if(unit.type == "at") {
+            if(unit.tag == unit.uid) {
+                return ""
+            }
             return `@${unit.tag}(${unit.uid}) `
         }
         if(unit.type == "imgzh") {

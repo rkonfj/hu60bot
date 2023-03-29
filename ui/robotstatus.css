@@ -9,3 +9,11 @@
     bottom: 1px;
     box-shadow: 0 0 2px #222;
 }
+.robotList {
+    padding: 5px 0 5px 5px;
+    line-height: 22px;
+    font-size: 16px;
+    vertical-align: middle;
+}
+.txtlink {margin: 0 10px 0 0;vertical-align: middle;}
+.smallava {width: 18px;height: 18px;min-width: 18px;min-height: 18px;vertical-align: middle;}

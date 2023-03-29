@@ -143,7 +143,7 @@ function appendChatList(chat, opts={updateStorage: true, focused: false}) {
     const chatItem = document.createElement('li')
     chatItem.innerHTML = 
         `<span class="newMsgTips">${chat.tipsCount}</span>
-        <img class="cavatar" src="${chat.avatar}" />
+        <img class="cavatar" src="${chat.avatar}" data-uid="${chat.uid}" />
         ${chat.name}<br />
         <span class="latestMsgOverview">${chat.overview?chat.overview:""}</span>
         <img class="clearChat" src="${window.hu60_res_clear_icon}" />`
@@ -579,6 +579,7 @@ function handleWsMsg(msg) {
     if(msg.event == 'lsol') {
         window.hu60_hu60bot_online_user = msg.data
         window.hu60_hu60bot_online_user[window.hu60_hu60bot_uid] = 1
+        renderRobotOnlineStatus()
         return
     }
 
@@ -587,6 +588,7 @@ function handleWsMsg(msg) {
             return
         }
         window.hu60_hu60bot_online_user[msg.data.uid] = msg.data.count
+        renderRobotOnlineStatus()
         return
     }
 
@@ -631,6 +633,17 @@ function handleWsMsg(msg) {
     }
 
     console.debug('unsupported message: ', msg)
+}
+
+function renderRobotOnlineStatus() {
+    document.querySelectorAll('#chatList .cavatar').forEach(avatar => {
+        let uid = avatar.getAttribute('data-uid')
+        if(!uid || uid > 0) {
+            return
+        }
+        let filter = `${window.hu60_hu60bot_online_user&&window.hu60_hu60bot_online_user[uid]&&window.hu60_hu60bot_online_user[uid]>0?'none':'grayscale(100%)'}`
+        avatar.style.filter = filter
+    })
 }
 
 function smallScreenDeviceSafeInit() {

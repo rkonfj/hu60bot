@@ -122,7 +122,7 @@
     width: 700px;
     height: 720px;
     margin: 0;
-    background: #f0f0f0;
+    background: var(--chat-bg);
     border-radius: 0 3px 3px 0;
     position: relative;
 }
@@ -182,7 +182,7 @@
 }
 
 #chatInput textarea {
-    border: 0.5px solid #ddd;
+    border: 0.5px solid var(--chat-ctitle-bottom);
     min-height: 50px;
     max-height: 50px;
     font-size: 14px;
@@ -191,10 +191,11 @@
     max-width: 100%;
     border-radius: 2px;
     padding: 5px;
+    background-color: var(--chat-bg);
 }
 
 #chatInputSend {
-    background: rgb(74, 202, 109);
+    background: var(--chat-cuser-bg);
     border-radius: 5px;
     color: #fff;
     border: none;
@@ -208,11 +209,11 @@
 }
 
 #chatInputSend:hover {
-    color: #000;
+    color: var(--chat-send-hover);
 }
 
 #ctitle {
-    border-bottom: .5px solid #ddd;
+    border-bottom: .5px solid var(--chat-ctitle-bottom);
     text-align: center;
     font-size: 17px;
     font-weight: bold;
@@ -236,7 +237,7 @@
 }
 
 #hu60botChat .chat .hu60bot {
-    background: #fff;
+    background: var(--chat-hu60bot-bg);
     float: left;
     padding: 10px;
     border-radius: 3px;
@@ -260,7 +261,7 @@
 }
 
 #hu60botChat .chat .cuser {
-    background: rgb(74, 202, 109);
+    background: var(--chat-cuser-bg);
 }
 
 #hu60botChat .chat .crightpos {
@@ -273,6 +274,22 @@
     margin: 10px 5px 0 0;
     -webkit-animation: rotate 1s linear infinite;
     animation: rotate 1s linear infinite;
+}
+
+:root {
+    --chat-bg: #f0f0f0;
+    --chat-ctitle-bottom: #ddd;
+    --chat-hu60bot-bg: #fff;
+    --chat-cuser-bg: rgb(74, 202, 109);
+    --chat-send-hover: #222;
+}
+  
+[data-hu60-color-scheme='dark'] {
+    --chat-bg: #222;
+    --chat-ctitle-bottom: #1d1d1d;
+    --chat-hu60bot-bg: #333;
+    --chat-cuser-bg: #111;
+    --chat-send-hover: rgb(74, 202, 109);
 }
 
 @media screen and (max-width: 1080px) {

@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"os/signal"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	cache "github.com/go-pkgz/expirable-cache/v2"
@@ -152,6 +154,16 @@ func (cm *ConversationManager) startTheMarkMsgReadTask() {
 				logrus.Trace("hu60.setMsgIsRead error: ", err)
 			}
 			logrus.Trace("hu60.setMsgIsRead response: ", r)
+		}
+	}()
+	go func() {
+		signals := make(chan os.Signal, 1)
+		defer close(signals)
+		signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+		for sig := range signals {
+			r, _ := cm.hu60Client.SetMsgIsRead(context.Background(), cm.botSid, 1)
+			logrus.Infof("signal: %s, mark all at msgs is read (%d msgs). done", sig, r.Result.Update)
+			os.Exit(0)
 		}
 	}()
 }

@@ -191,7 +191,7 @@
     max-width: 100%;
     border-radius: 2px;
     padding: 5px;
-    background-color: var(--chat-bg);
+    background-color: var(--chat-hu60bot-bg);
 }
 
 #chatInputSend {

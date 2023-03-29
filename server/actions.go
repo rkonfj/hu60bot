@@ -79,6 +79,9 @@ func pingAction(wm *WebsocketManager, ws *websocket.Conn, cmd BotCmd, uid int) {
 func listOnlineUserAction(wm *WebsocketManager, ws *websocket.Conn, cmd BotCmd, uid int) {
 	onlineData := make(map[int]int)
 	for k, v := range wm.connMap {
+		if k > 0 {
+			continue
+		}
 		onlineData[k] = len(v)
 	}
 	ws.WriteJSON(BotEvent{Event: "lsol", Data: onlineData})

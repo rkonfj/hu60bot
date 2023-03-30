@@ -9,6 +9,7 @@ import (
 )
 
 type LoginRequest struct {
+	CommonRequest
 	Username string
 	Password string
 }
@@ -16,6 +17,11 @@ type LoginRequest struct {
 type LoginResponse struct {
 	Result
 	Uid int
+	Sid string
+}
+
+type GetProfileRequest struct {
+	CommonRequest
 	Sid string
 }
 
@@ -36,6 +42,10 @@ func (c *Client) Login(ctx context.Context, request LoginRequest) (respone Login
 		return
 	}
 
+	if request.XFFIP != "" {
+		req.Header.Set(c.config.XFFHeader, request.XFFIP)
+	}
+
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	err = c.sendRequest(req, &respone)
@@ -47,15 +57,21 @@ func (c *Client) Login(ctx context.Context, request LoginRequest) (respone Login
 	return
 }
 
-func (c *Client) GetProfile(ctx context.Context, sid string) (response GetProfileResponse, err error) {
+func (c *Client) GetProfile(ctx context.Context, request GetProfileRequest) (response GetProfileResponse, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.fullURL("/user.index.json"), nil)
 	if err != nil {
 		return
 	}
-	req.Header.Set("Cookie", "hu60_sid="+sid)
+	if request.XFFIP != "" {
+		req.Header.Set(c.config.XFFHeader, request.XFFIP)
+	}
+	req.Header.Set("Cookie", "hu60_sid="+request.Sid)
 	err = c.sendRequest(req, &response)
+	if err != nil {
+		return
+	}
 	if response.Uid == 0 {
-		err = fmt.Errorf("can not get user uid. sid %s is not correct", sid)
+		err = fmt.Errorf("can not get user uid. sid %s is not correct", request.Sid)
 	}
 	return
 }

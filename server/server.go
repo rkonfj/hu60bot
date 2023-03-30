@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -68,7 +69,11 @@ func NewWebsocketManager(opts ServerOptions, cm *convo.ConversationManager) *Web
 				return true
 			},
 		},
-		hu60Client:            hu60.NewClient(opts.Hu60wap6APIURL),
+		hu60Client: hu60.NewClientWithConfig(hu60.Config{
+			ApiURL:     opts.Hu60wap6APIURL,
+			HTTPClient: http.DefaultClient,
+			XFFHeader:  opts.BotXFF,
+		}),
 		connMap:               make(map[int][]*websocket.Conn),
 		connMapUpdateLock:     sync.Mutex{},
 		cm:                    cm,
@@ -148,6 +153,18 @@ func checkSameOrigin(r *http.Request) bool {
 	return equalASCIIFold(u.Host, r.Host)
 }
 
+func getRealIP(r *http.Request) string {
+	realIP := r.Header.Get("X-Real-IP")
+	if realIP != "" {
+		logrus.Debugf("resolve real ip from x-real-ip: %s", realIP)
+		return realIP
+	}
+
+	tcpAddr, _ := net.ResolveTCPAddr("tcp", r.RemoteAddr)
+	logrus.Debugf("resolve real ip from remote addr: %s", tcpAddr.IP.String())
+	return tcpAddr.IP.String()
+}
+
 func (m *WebsocketManager) Run() error {
 	if (<-m.depOkSig) != 1 {
 		return errors.New("dependency canal start failed")
@@ -175,14 +192,18 @@ func (m *WebsocketManager) Run() error {
 		// 获取sid（跨域时禁用cookie）
 		sid := getRequestParam(r, "sid", noCookie)
 		if sid == "" {
-			m.responseUnauthenticated(ws)
+			m.responseUnauthenticated(ws, "sid not found")
 			logrus.Warn("authentication failed: sid not found")
 			return
 		}
 
-		res, err := m.hu60Client.GetProfile(context.Background(), sid)
+		res, err := m.hu60Client.GetProfile(context.Background(), hu60.GetProfileRequest{
+			CommonRequest: hu60.CommonRequest{XFFIP: getRealIP(r)},
+			Sid:           sid,
+		})
+
 		if err != nil {
-			m.responseUnauthenticated(ws)
+			m.responseUnauthenticated(ws, err.Error())
 			logrus.Warn("authentication failed: ", err.Error())
 			return
 		}
@@ -195,6 +216,12 @@ func (m *WebsocketManager) Run() error {
 		m.connMapUpdateLock.Lock()
 		if _, ok := m.connMap[res.Uid]; !ok {
 			m.connMap[res.Uid] = []*websocket.Conn{}
+		}
+		userConnCount := len(m.connMap[res.Uid])
+		if userConnCount >= m.options.ConnectionLimitPerUser {
+			m.closeConn(m.connMap[res.Uid][userConnCount-1])
+			m.connMap[res.Uid] = m.connMap[res.Uid][:userConnCount-1]
+			logrus.Infof("user %s reach the connections limit, closed the first one", res.Name)
 		}
 		m.connMap[res.Uid] = append(m.connMap[res.Uid], ws)
 		m.connMapUpdateLock.Unlock()
@@ -211,6 +238,18 @@ func (m *WebsocketManager) Run() error {
 	m.startUserOnlineStatusBroadcastTask()
 	logrus.Info("bot listening on ", m.options.Listen, " for interact now. websocket endpoint is /v1/ws")
 	return http.ListenAndServe(m.options.Listen, nil)
+}
+
+func (m *WebsocketManager) closeConn(conn *websocket.Conn) {
+	go func(conn *websocket.Conn) {
+		defer func() {
+			if err := recover(); err != nil {
+				logrus.Trace("close: ws conn already closed")
+			}
+		}()
+		conn.WriteMessage(websocket.TextMessage, []byte(`{"event": "disconnecting"}`))
+		conn.Close()
+	}(conn)
 }
 
 func (m *WebsocketManager) broadcast(event BotEvent) {
@@ -293,9 +332,9 @@ func (m *WebsocketManager) connMessageListener(userProfile hu60.GetProfileRespon
 	}
 }
 
-func (m *WebsocketManager) responseUnauthenticated(ws *websocket.Conn) {
+func (m *WebsocketManager) responseUnauthenticated(ws *websocket.Conn, msg string) {
 	ws.WriteMessage(websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Unauthenticated"))
+		websocket.FormatCloseMessage(websocket.ClosePolicyViolation, msg))
 	ws.Close()
 }
 

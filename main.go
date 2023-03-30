@@ -21,20 +21,27 @@ func main() {
 	}
 	cmd.Flags().String("conversation-window", "30m", "conversation valid time. example: 1m, 1h, 1d ...")
 	cmd.Flags().String("log-level", "info", "logging level. example: error, warn, info, debug ...")
+
 	cmd.Flags().String("hu60api", "https://hu60.cn", "hu60wap6's api url")
 	cmd.Flags().String("hu60ws", "wss://hu60.cn/ws/msg", "hu60wap6's websocket endpoint url")
+	cmd.Flags().StringP("hu60user", "u", "", "robot username for login hu60wap6")
+	cmd.Flags().StringP("hu60pass", "p", "", "robot password for login hu60wap6")
+
 	cmd.Flags().StringP("openai-token", "k", "", "api key for access openai. https://platform.openai.com/account/api-keys")
 	cmd.Flags().String("openai-model", openai.GPT3Dot5Turbo, "id of the openai model to use. https://platform.openai.com/docs/models/overview")
 	cmd.Flags().String("openai-api", "https://api.openai.com/v1", "openai's api url with version")
 	cmd.Flags().String("openai-timeout", "65s", "timeout for requesting openai api")
+
 	cmd.Flags().String("canal-host", "127.0.0.1", "canal host for watching hu60wap6 db")
 	cmd.Flags().Int("canal-port", 11111, "canal port for watching hu60wap6 db")
 	cmd.Flags().String("canal-client-destination", "hu60bot", "canal client destination for watching hu60wap6 db")
-	cmd.Flags().StringSlice("disable-action", []string{}, "disable bot action. can be specified multiple times to disable multiple actions")
 
-	cmd.Flags().StringP("hu60user", "u", "", "robot username for login hu60wap6")
-	cmd.Flags().StringP("hu60pass", "p", "", "robot password for login hu60wap6")
+	cmd.Flags().StringSlice("disable-action", []string{}, "websocket server disabled bot action. can be specified multiple times")
+
 	cmd.Flags().StringP("listen", "l", "127.0.0.1:4860", "websocket server listen address")
+	cmd.Flags().Int("wspu", 10, "websocket server connections limit per user")
+
+	cmd.Flags().String("botxff", "X-Forwarded-For", "header will be sent to hu60api which value is the ws client's original ip")
 
 	cmd.MarkFlagRequired("hu60user")
 	cmd.MarkFlagRequired("hu60pass")
@@ -118,7 +125,15 @@ func processServerOptions(cmd *cobra.Command) (options server.ServerOptions, err
 	if err != nil {
 		return
 	}
+	options.BotXFF, err = cmd.Flags().GetString("botxff")
+	if err != nil {
+		return
+	}
 	options.DisabledActions, err = cmd.Flags().GetStringSlice("disable-action")
+	if err != nil {
+		return
+	}
+	options.ConnectionLimitPerUser, err = cmd.Flags().GetInt("wspu")
 	if err != nil {
 		return
 	}

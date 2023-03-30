@@ -14,6 +14,11 @@ type Client struct {
 type Config struct {
 	ApiURL     string
 	HTTPClient *http.Client
+	XFFHeader  string
+}
+
+type CommonRequest struct {
+	XFFIP string
 }
 
 type Result struct {
@@ -25,6 +30,7 @@ func NewClient(apiURL string) *Client {
 	return NewClientWithConfig(Config{
 		ApiURL:     apiURL,
 		HTTPClient: http.DefaultClient,
+		XFFHeader:  "X-Forwarded-For",
 	})
 }
 func NewClientWithConfig(config Config) *Client {
@@ -48,6 +54,10 @@ func (c *Client) sendRequest(req *http.Request, v interface{}) error {
 
 	defer res.Body.Close()
 
+	if res.StatusCode == http.StatusTooManyRequests {
+		return fmt.Errorf("too many requests! retry after: %s", res.Header.Get("Retry-After"))
+	}
+
 	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusBadRequest {
 		b, err := io.ReadAll(res.Body)
 		if err != nil {
@@ -57,13 +67,8 @@ func (c *Client) sendRequest(req *http.Request, v interface{}) error {
 	}
 
 	if v != nil {
-		// b, err := io.ReadAll(res.Body)
-		// if err != nil {
-		// 	return err
-		// }
-		// fmt.Println("response: ", string(b))
 		if err = json.NewDecoder(res.Body).Decode(v); err != nil {
-			return err
+			return fmt.Errorf("invalid json format: %s", err.Error())
 		}
 	}
 

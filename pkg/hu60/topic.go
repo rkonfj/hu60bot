@@ -10,6 +10,7 @@ import (
 )
 
 type ReplyTopicRequest struct {
+	CommonRequest
 	Token   string
 	Content string
 	TopicID int
@@ -30,6 +31,9 @@ func (c *Client) ReplyTopic(ctx context.Context, sid string, request ReplyTopicR
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.fullURL(suffix), strings.NewReader(requestBody))
 	if err != nil {
 		return
+	}
+	if request.XFFIP != "" {
+		req.Header.Set(c.config.XFFHeader, request.XFFIP)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Cookie", "hu60_sid="+sid)

@@ -8,11 +8,12 @@ Usage:
   hu60bot [flags]
 
 Flags:
+      --botxff string                     header will be sent to hu60api which value is the ws client's original ip (default "X-Forwarded-For")
       --canal-client-destination string   canal client destination for watching hu60wap6 db (default "hu60bot")
       --canal-host string                 canal host for watching hu60wap6 db (default "127.0.0.1")
       --canal-port int                    canal port for watching hu60wap6 db (default 11111)
       --conversation-window string        conversation valid time. example: 1m, 1h, 1d ... (default "30m")
-      --disable-action strings            disable bot action. can be specified multiple times to disable multiple actions
+      --disable-action strings            websocket server disabled bot action. can be specified multiple times
   -h, --help                              help for hu60bot
       --hu60api string                    hu60wap6's api url (default "https://hu60.cn")
   -p, --hu60pass string                   robot password for login hu60wap6
@@ -24,4 +25,5 @@ Flags:
       --openai-model string               id of the openai model to use. https://platform.openai.com/docs/models/overview (default "gpt-3.5-turbo")
       --openai-timeout string             timeout for requesting openai api (default "65s")
   -k, --openai-token string               api key for access openai. https://platform.openai.com/account/api-keys
+      --wspu int                          websocket server connections limit per user (default 10)
 ```

@@ -12,4 +12,5 @@ type ConversationOptions struct {
 	OpenaiAPIURL         string
 	OpenaiRequestTimeout time.Duration
 	ConversationWindow   time.Duration
+	ConversationBgFile   string
 }

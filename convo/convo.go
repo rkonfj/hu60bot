@@ -1,6 +1,7 @@
 package convo
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -20,15 +21,16 @@ import (
 )
 
 type ConversationManager struct {
-	hu60Client          *hu60.Client
-	openaiClient        *openai.Client
-	options             ConversationOptions
-	conversationContext cache.Cache[string, []openai.ChatCompletionMessage]
-	openaiTokensUsage   openai.Usage
-	botReadyTask        sync.WaitGroup
-	botUid              int
-	botSid              string
-	botMsgChan          chan hu60.Msg
+	hu60Client             *hu60.Client
+	openaiClient           *openai.Client
+	options                ConversationOptions
+	conversationContext    cache.Cache[string, []openai.ChatCompletionMessage]
+	openaiTokensUsage      openai.Usage
+	botReadyTask           sync.WaitGroup
+	botUid                 int
+	botSid                 string
+	botMsgChan             chan hu60.Msg
+	conversationBackground []string
 }
 
 type SeWsEvent struct {
@@ -53,14 +55,32 @@ type WsHu60Msg struct {
 func NewConversationManager(options ConversationOptions) *ConversationManager {
 	openaiCfg := openai.DefaultConfig(options.OpenaiToken)
 	openaiCfg.BaseURL = options.OpenaiAPIURL
+
+	bg := []string{}
+	file, err := os.Open(options.ConversationBgFile)
+	if err == nil {
+		defer file.Close()
+		logrus.Info("bot loading conversation background file: ", options.ConversationBgFile)
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			bg = append(bg, scanner.Text())
+			logrus.Debug("bot loaded words: ", scanner.Text())
+		}
+
+		if err := scanner.Err(); err != nil {
+			logrus.Warn(err)
+		}
+	}
+
 	cm := ConversationManager{
 		hu60Client:   hu60.NewClient(options.Hu60APIURL),
 		openaiClient: openai.NewClientWithConfig(openaiCfg),
 		options:      options,
 		conversationContext: cache.NewCache[string, []openai.ChatCompletionMessage]().
 			WithMaxKeys(4096).WithTTL(time.Second * 30),
-		botReadyTask: sync.WaitGroup{},
-		botMsgChan:   make(chan hu60.Msg, 64),
+		botReadyTask:           sync.WaitGroup{},
+		botMsgChan:             make(chan hu60.Msg, 64),
+		conversationBackground: bg,
 	}
 	cm.updateConversationStats()
 	cm.botReadyTask.Add(1)
@@ -253,6 +273,12 @@ func (cm *ConversationManager) Ask(words, conversationKey string) (answer string
 	} else {
 		isNewConvo = true
 		conversationMsgs = []openai.ChatCompletionMessage{}
+		for _, syswords := range cm.conversationBackground {
+			conversationMsgs = append(conversationMsgs, openai.ChatCompletionMessage{
+				Role:    openai.ChatMessageRoleSystem,
+				Content: syswords,
+			})
+		}
 	}
 
 	conversationMsgs = append(conversationMsgs, openai.ChatCompletionMessage{

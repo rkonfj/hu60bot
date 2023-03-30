@@ -20,6 +20,7 @@ func main() {
 		RunE:    botAction,
 	}
 	cmd.Flags().String("conversation-window", "30m", "conversation valid time. example: 1m, 1h, 1d ...")
+	cmd.Flags().String("conversation-bg", "bg.txt", "each line is decorated as a system role message sent to openai")
 	cmd.Flags().String("log-level", "info", "logging level. example: error, warn, info, debug ...")
 
 	cmd.Flags().String("hu60api", "https://hu60.cn", "hu60wap6's api url")
@@ -75,6 +76,11 @@ func processConversationOptions(cmd *cobra.Command) (options convo.ConversationO
 		return options, err
 	} else {
 		options.ConversationWindow = conversationWindowDuration
+	}
+
+	options.ConversationBgFile, err = cmd.Flags().GetString("conversation-bg")
+	if err != nil {
+		return
 	}
 
 	options.Hu60APIURL, err = cmd.Flags().GetString("hu60api")

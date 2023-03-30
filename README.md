@@ -12,6 +12,7 @@ Flags:
       --canal-client-destination string   canal client destination for watching hu60wap6 db (default "hu60bot")
       --canal-host string                 canal host for watching hu60wap6 db (default "127.0.0.1")
       --canal-port int                    canal port for watching hu60wap6 db (default 11111)
+      --conversation-bg string            each line is decorated as a system role message sent to openai (default "bg.txt")
       --conversation-window string        conversation valid time. example: 1m, 1h, 1d ... (default "30m")
       --disable-action strings            websocket server disabled bot action. can be specified multiple times
   -h, --help                              help for hu60bot

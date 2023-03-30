@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -64,10 +65,12 @@ func (c *Client) ListMsg(ctx context.Context, sid string, opts ListMsgOptions) (
 }
 
 func (c *Client) SetMsgIsRead(ctx context.Context, sid string, t int) (response SetMsgIsReadResponse, err error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.fullURL("/api.msg.isread.set.json"), nil)
+	requestBody := fmt.Sprintf(`data={"type":%d}`, t)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.fullURL("/api.msg.isread.set.json"), strings.NewReader(requestBody))
 	if err != nil {
 		return
 	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Add("Cookie", "hu60_sid="+sid)
 	err = c.sendRequest(req, &response)
 	return

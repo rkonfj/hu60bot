@@ -719,13 +719,13 @@ function getHu60MsgText(msgContent) {
             return setext(unit.value)
         }
         if(unit.type == "mdpre") {
-            return unit.data
+            return setext(unit.data)
         }
         if(unit.type == "face") {
             return `{${unit.face}}`
         }
         if(unit.type == "mdcode") {
-            return unit.quote + unit.lang + unit.data + unit.quote
+            return unit.quote + unit.lang + setext(unit.data) + unit.quote
         }
         if(unit.type == "at") {
             if(unit.tag == `#${unit.uid}`) {

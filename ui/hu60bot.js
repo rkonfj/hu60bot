@@ -430,17 +430,21 @@ function hu60botWindowOp(open) {
     try{
         if(open) {
             document.querySelector('header').style.display = 'none'
-          document.querySelector('.container').style.display = 'none'
-          document.querySelector('footer').style.display = 'none'
-          document.querySelector('#hu60botChat').style.display = 'flex'
-          let chatContainer = document.querySelector('#chatContainer') 
-          chatContainer.scrollTop = chatContainer.scrollHeight
-          return
+            document.querySelector('.container').style.display = 'none'
+            document.querySelector('footer').style.display = 'none'
+            document.querySelector('#hu60botChat').style.display = 'flex'
+            let chatContainer = document.querySelector('#chatContainer') 
+            chatContainer.scrollTop = chatContainer.scrollHeight
+            document.body.style.height='10px'
+            document.body.style.background = 'linear-gradient(90deg, #edc0bf 0,#c4caef 58%)'
+            return
       }
         document.querySelector('header').style.display= 'block'
-      document.querySelector('.container').style.display= 'block'
-      document.querySelector('footer').style.display= 'block'
-      document.querySelector('#hu60botChat').style.display = 'none'
+        document.querySelector('.container').style.display= 'block'
+        document.querySelector('footer').style.display= 'block'
+        document.querySelector('#hu60botChat').style.display = 'none'
+        document.body.style.background = 'var(--background-color-1)'
+        document.body.style.height='none'
     }catch(_) {alert("当前不支持该主题")}
 
 }
@@ -724,7 +728,7 @@ function getHu60MsgText(msgContent) {
             return unit.quote + unit.lang + unit.data + unit.quote
         }
         if(unit.type == "at") {
-            if(unit.tag == unit.uid) {
+            if(unit.tag == `#${unit.uid}`) {
                 return ""
             }
             return `@${unit.tag}(${unit.uid}) `

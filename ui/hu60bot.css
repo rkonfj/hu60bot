@@ -183,8 +183,8 @@
 
 #chatInput textarea {
     border: 0.5px solid var(--chat-ctitle-bottom);
-    min-height: 50px;
-    max-height: 50px;
+    min-height: 53px;
+    max-height: 53px;
     font-size: 14px;
     line-height: 20px;
     min-width: 100%;
@@ -200,11 +200,11 @@
     color: #fff;
     border: none;
     position: absolute;
-    padding: 4px 15px;
+    padding: 2px 15px;
     line-height: 20px;
     font-size: 14px;
     cursor: pointer;
-    bottom: 15px;
+    bottom: 12px;
     right: 20px
 }
 

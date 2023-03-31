@@ -143,7 +143,7 @@ function appendChatList(chat, opts={updateStorage: true, focused: false}) {
     const chatItem = document.createElement('li')
     chatItem.innerHTML = 
         `<span class="newMsgTips">${chat.tipsCount}</span>
-        <img class="cavatar" src="${chat.avatar}" data-uid="${chat.uid}" />
+        <img class="cavatar" onerror="this.src = window.hu60_res_default_avatar" src="${chat.avatar}" data-uid="${chat.uid}" />
         ${chat.name}<br />
         <span class="latestMsgOverview">${chat.overview?chat.overview:""}</span>
         <img class="clearChat" src="${window.hu60_res_clear_icon}" />`
@@ -389,6 +389,7 @@ function appendChatText(words, uid, opts={self: false,updateStorage: true}) {
     const avatar = document.createElement("img")
     avatar.classList.add('cavatar')
     avatar.src = window.hu60_chatwindow_obj.avatar
+    avatar.addEventListener('error', (e) => avatar.src = window.hu60_res_default_avatar)
 
     const text = document.createElement("div")
     text.classList.add('hu60bot')
@@ -408,7 +409,6 @@ function appendChatText(words, uid, opts={self: false,updateStorage: true}) {
         text.classList.add('cuser')
         text.innerText = words
         avatar.src = `${window.hu60_site_file_url}/avatar/${window.hu60_uid}.jpg`
-        avatar.addEventListener('error', (e) => avatar.src = window.hu60_res_default_avatar)
 
         if(opts.updateStorage) {
             const icon = document.createElement("img")

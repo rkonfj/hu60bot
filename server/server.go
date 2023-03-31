@@ -229,9 +229,9 @@ func (m *WebsocketManager) Run() error {
 		}
 		userConnCount := len(m.connMap[res.Uid])
 		if userConnCount >= m.options.ConnectionLimitPerUser {
-			m.closeConn(m.connMap[res.Uid][userConnCount-1])
+			m.closeConn(m.connMap[res.Uid][userConnCount-1], "reached the connections limit")
 			m.connMap[res.Uid] = m.connMap[res.Uid][:userConnCount-1]
-			logrus.Infof("user %s reach the connections limit, closed the first one", res.Name)
+			logrus.Infof("user %s reached the connections limit, closed the first one", res.Name)
 		}
 		m.connMap[res.Uid] = append(m.connMap[res.Uid], ws)
 		m.connMapUpdateLock.Unlock()
@@ -252,14 +252,14 @@ func (m *WebsocketManager) Run() error {
 	return http.ListenAndServe(m.options.Listen, nil)
 }
 
-func (m *WebsocketManager) closeConn(conn *websocket.Conn) {
+func (m *WebsocketManager) closeConn(conn *websocket.Conn, msg string) {
 	go func(conn *websocket.Conn) {
 		defer func() {
 			if err := recover(); err != nil {
 				logrus.Trace("close: ws conn already closed")
 			}
 		}()
-		conn.WriteMessage(websocket.TextMessage, []byte(`{"event": "disconnecting"}`))
+		conn.WriteJSON(BotEvent{Event: "disconnecting", Data: msg})
 		conn.Close()
 	}(conn)
 }

@@ -21,14 +21,18 @@ import (
 )
 
 type WebsocketManager struct {
-	upgrader              websocket.Upgrader
-	hu60Client            *hu60.Client
-	connMap               map[int][]*websocket.Conn
-	connMapUpdateLock     sync.Mutex
-	cm                    *convo.ConversationManager
-	options               ServerOptions
-	depOkSig              chan int
-	userOnlineStatusChain chan BotEvent
+	upgrader               websocket.Upgrader
+	hu60Client             *hu60.Client
+	connMap                map[int][]*websocket.Conn
+	connMapUpdateLock      sync.Mutex
+	cm                     *convo.ConversationManager
+	options                ServerOptions
+	depOkSig               chan int
+	broadcastEventChan     chan BotEvent
+	connEventChan          chan ConnBotEvent
+	userEventChan          chan UserBotEvent
+	unsubscribedEvents     map[int][]string
+	unsubscribedEventsLock sync.Mutex
 }
 
 type Hu60Msg struct {
@@ -50,6 +54,17 @@ type BotCmd struct {
 	ID     string `json:"id"`
 	Action string `json:"action"`
 	Data   any    `json:"data"`
+}
+
+type ConnBotEvent struct {
+	Event BotEvent
+	Uid   int
+	Ws    *websocket.Conn
+}
+
+type UserBotEvent struct {
+	Event BotEvent
+	Uid   int
 }
 
 type UserOnlineStatus struct {
@@ -74,28 +89,23 @@ func NewWebsocketManager(opts ServerOptions, cm *convo.ConversationManager) *Web
 			HTTPClient: http.DefaultClient,
 			XFFHeader:  opts.BotXFF,
 		}),
-		connMap:               make(map[int][]*websocket.Conn),
-		connMapUpdateLock:     sync.Mutex{},
-		cm:                    cm,
-		options:               opts,
-		depOkSig:              make(chan int),
-		userOnlineStatusChain: make(chan BotEvent, 1024),
+		connMap:                make(map[int][]*websocket.Conn),
+		connMapUpdateLock:      sync.Mutex{},
+		cm:                     cm,
+		options:                opts,
+		depOkSig:               make(chan int),
+		broadcastEventChan:     make(chan BotEvent, 1024),
+		connEventChan:          make(chan ConnBotEvent, 1024),
+		userEventChan:          make(chan UserBotEvent, 1024),
+		unsubscribedEvents:     make(map[int][]string),
+		unsubscribedEventsLock: sync.Mutex{},
 	}
 }
 
 func (m *WebsocketManager) Push(msg *Hu60Msg) {
-	if wsArr, ok := m.connMap[msg.ToUID]; ok {
-		for _, ws := range wsArr {
-			if ws == nil {
-				continue
-			}
-			err := ws.WriteJSON(BotEvent{Event: "msg", Data: msg})
-			if err != nil {
-				logrus.Warn("websocketManger push error: ", err)
-			}
-		}
-	} else {
-		logrus.Infof("uid %d not online, discard msg id=%d", msg.ToUID, msg.ID)
+	m.userEventChan <- UserBotEvent{
+		Event: BotEvent{Event: "msg", Data: msg},
+		Uid:   msg.ToUID,
 	}
 }
 
@@ -226,7 +236,7 @@ func (m *WebsocketManager) Run() error {
 		m.connMap[res.Uid] = append(m.connMap[res.Uid], ws)
 		m.connMapUpdateLock.Unlock()
 		if res.Uid < 0 {
-			m.userOnlineStatusChain <- BotEvent{Event: "online", Data: UserOnlineStatus{
+			m.broadcastEventChan <- BotEvent{Event: "online", Data: UserOnlineStatus{
 				UID:   res.Uid,
 				Count: m.validConnCount(res.Uid),
 			}}
@@ -235,7 +245,9 @@ func (m *WebsocketManager) Run() error {
 			res.Name, m.validConnCount(res.Uid))
 		go m.connMessageListener(res, ws)
 	})
-	m.startUserOnlineStatusBroadcastTask()
+	m.startConnEventSendTask()
+	m.startEventBroadcastTask()
+	m.startUserEventSendTask()
 	logrus.Info("bot listening on ", m.options.Listen, " for interact now. websocket endpoint is /v1/ws")
 	return http.ListenAndServe(m.options.Listen, nil)
 }
@@ -253,7 +265,10 @@ func (m *WebsocketManager) closeConn(conn *websocket.Conn) {
 }
 
 func (m *WebsocketManager) broadcast(event BotEvent) {
-	for _, v := range m.connMap {
+	for k, v := range m.connMap {
+		if !m.eventSubscribed(k, event.Event) {
+			continue
+		}
 		for _, ws := range v {
 			go func(ws *websocket.Conn) {
 				defer func() {
@@ -268,11 +283,61 @@ func (m *WebsocketManager) broadcast(event BotEvent) {
 	}
 }
 
-func (m *WebsocketManager) startUserOnlineStatusBroadcastTask() {
+func (m *WebsocketManager) startEventBroadcastTask() {
 	go func() {
-		defer close(m.userOnlineStatusChain)
-		for stat := range m.userOnlineStatusChain {
-			m.broadcast(stat)
+		defer close(m.broadcastEventChan)
+		for e := range m.broadcastEventChan {
+			m.broadcast(e)
+		}
+	}()
+}
+
+func (m *WebsocketManager) startConnEventSendTask() {
+	go func() {
+		defer close(m.connEventChan)
+		for e := range m.connEventChan {
+			if !m.eventSubscribed(e.Uid, e.Event.Event) {
+				continue
+			}
+			go func(event ConnBotEvent) {
+				defer func() {
+					if err := recover(); err != nil {
+						logrus.Trace("send conn event: ws conn already closed")
+					}
+				}()
+				event.Ws.WriteJSON(event.Event)
+			}(e)
+		}
+	}()
+}
+
+func (m *WebsocketManager) startUserEventSendTask() {
+	go func() {
+		defer close(m.userEventChan)
+		for e := range m.userEventChan {
+			if !m.eventSubscribed(e.Uid, e.Event.Event) {
+				continue
+			}
+			if wsArr, ok := m.connMap[e.Uid]; ok {
+				for _, conn := range wsArr {
+					if conn == nil {
+						continue
+					}
+					go func(ws *websocket.Conn, event BotEvent) {
+						defer func() {
+							if err := recover(); err != nil {
+								logrus.Trace("send user event: ws conn already closed")
+							}
+						}()
+						err := ws.WriteJSON(event)
+						if err != nil {
+							logrus.Warn("send user event error: ", err)
+						}
+					}(conn, e.Event)
+				}
+			} else {
+				logrus.Infof("uid %d not online, discard event: %s", e.Uid, e.Event.Event)
+			}
 		}
 	}()
 }
@@ -283,6 +348,13 @@ func (m *WebsocketManager) OnCanalStartSucceed() {
 
 func (m *WebsocketManager) OnCanalStartFailed() {
 	m.depOkSig <- 0
+}
+
+func (m *WebsocketManager) eventSubscribed(uid int, event string) bool {
+	if unsubs, ok := m.unsubscribedEvents[uid]; ok {
+		return !slices.Contains(unsubs, event)
+	}
+	return true
 }
 
 func (m *WebsocketManager) validConnCount(uid int) int {
@@ -319,7 +391,7 @@ func (m *WebsocketManager) connMessageListener(userProfile hu60.GetProfileRespon
 			}
 			m.connMapUpdateLock.Unlock()
 			if userProfile.Uid < 0 {
-				m.userOnlineStatusChain <- BotEvent{Event: "offline", Data: UserOnlineStatus{
+				m.broadcastEventChan <- BotEvent{Event: "offline", Data: UserOnlineStatus{
 					UID:   userProfile.Uid,
 					Count: validConnCount,
 				}}

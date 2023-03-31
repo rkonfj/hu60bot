@@ -67,7 +67,8 @@ function initCurrentUserInfo() {
 
 function initHu60botChat() {
     let hu60botChatBaseHTML = 
-        `<div id="chatList">
+        `<!-- author https://github.com/rkonfj -->
+        <div id="chatList">
             <div class="hltitle">
                 <span class="hu60botwsstatus" title="disconnected"></span>
                 <img src="${window.hu60_res_exit_chat_icon}" class="hu60botminwindow" title="minimize"/>
@@ -437,8 +438,9 @@ function hu60botWindowOp(open) {
             chatContainer.scrollTop = chatContainer.scrollHeight
             document.body.style.height='10px'
             document.body.style.background = 'linear-gradient(90deg, #edc0bf 0,#c4caef 58%)'
-            return
-      }
+            largeScreenDeviceSafeInit()
+        return
+        }
         document.querySelector('header').style.display= 'block'
         document.querySelector('.container').style.display= 'block'
         document.querySelector('footer').style.display= 'block'
@@ -454,6 +456,10 @@ function initGlobalListener() {
         if(event.ctrlKey && event.code === 'Enter') {
             document.querySelector('#chatInput button').click()
         }
+    })
+
+    window.addEventListener("resize", ()=>{
+        largeScreenDeviceSafeInit()
     })
 
     setInterval(()=>{
@@ -512,7 +518,9 @@ function showPluginDoor() {
     }
     let hu60botPlugin = document.createElement("div")
     hu60botPlugin.id = 'hu60botPlugin'
-    hu60botPlugin.innerHTML = `<img src="${window.hu60_res_bot_icon}" />`
+    hu60botPlugin.innerHTML = `
+        <!-- author https://github.com/rkonfj -->
+        <img src="${window.hu60_res_bot_icon}" />`
     hu60botPlugin.addEventListener('click', e => {
         let hu60botChat = document.querySelector('#hu60botChat')
         if (hu60botChat.style.display == 'none' || hu60botChat.style.display == "") {

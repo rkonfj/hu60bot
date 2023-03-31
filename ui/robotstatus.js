@@ -12,20 +12,14 @@
         let robotList = document.createElement('div')
         robotList.classList.add('robotList')
         robotList.innerHTML = `
-            <a href="javascript:;" onclick="tipsMe(this)" data-at="@hu60bot"><img src="https://file.hu60.cn/avatar/-50.jpg" class="avatar smallava" data-uid="-54" /></a>
-            <a class="txtlink" href="javascript:;" onclick="tipsMe(this)" data-at="@hu60bot">@hu60bot</a>
-            <a href="javascript:;" onclick="tipsMe(this)" data-at="@ChatGPT"><img src="https://file.hu60.cn/avatar/-50.jpg" class="avatar smallava" data-uid="-50" /></a>
-            <a class="txtlink" onclick="tipsMe(this)" href="javascript:;" data-at="@ChatGPT">@ChatGPT</a>
-            <a href="javascript:;" onclick="tipsMe(this)" data-at="@罐子2号"><img src="https://file.hu60.cn/avatar/-50.jpg" class="avatar smallava" data-uid="-51" /></a>
-            <a class="txtlink" onclick="tipsMe(this)" href="javascript:;" data-at="@罐子2号">@罐子2号</a>
-            <a href="javascript:;" onclick="tipsMe(this)" data-at="@靓仔"><img src="https://file.hu60.cn/avatar/-50.jpg" class="avatar smallava" data-uid="-53" /></a>
-            <a class="txtlink" onclick="tipsMe(this)" href="javascript:;" data-at="@靓仔">@靓仔</a>
-            <a href="javascript:;" onclick="tipsMe(this)" data-at="@QA"><img src="https://file.hu60.cn/avatar/-50.jpg" class="avatar smallava" data-uid="-55" /></a>
-            <a class="txtlink" onclick="tipsMe(this)" href="javascript:;" data-at="@QA">@QA</a>
-            <a href="javascript:;" onclick="tipsMe(this)" data-at="@Chatbot"><img src="https://file.hu60.cn/avatar/-56.jpg" class="avatar smallava" data-uid="-56" /></a>
-            <a class="txtlink" onclick="tipsMe(this)" href="javascript:;" data-at="@Chatbot">@Chatbot</a>
-            <a href="javascript:;" onclick="tipsMe(this)" data-at="@GPTbot"><img src="https://file.hu60.cn/avatar/-57.jpg" class="avatar smallava" data-uid="-57" /></a>
-            <a class="txtlink" onclick="tipsMe(this)" href="javascript:;" data-at="@GPTbot">@GPTbot</a>
+            <!-- author https://github.com/rkonfj -->
+            <a href="javascript:;" onclick="tipsMe(this)" title="@hu60bot" data-at="@hu60bot"><img src="https://file.hu60.cn/avatar/-50.jpg" class="avatar smallava" data-uid="-54" /></a>
+            <a href="javascript:;" onclick="tipsMe(this)" title="@ChatGPT" data-at="@ChatGPT"><img src="https://file.hu60.cn/avatar/-50.jpg" class="avatar smallava" data-uid="-50" /></a>
+            <a href="javascript:;" onclick="tipsMe(this)" title="@罐子2号" data-at="@罐子2号"><img src="https://file.hu60.cn/avatar/-50.jpg" class="avatar smallava" data-uid="-51" /></a>
+            <a href="javascript:;" onclick="tipsMe(this)" title="@靓仔" data-at="@靓仔"><img src="https://file.hu60.cn/avatar/-50.jpg" class="avatar smallava" data-uid="-53" /></a>
+            <a href="javascript:;" onclick="tipsMe(this)" title="@QA" data-at="@QA"><img src="https://file.hu60.cn/avatar/-50.jpg" class="avatar smallava" data-uid="-55" /></a>
+            <a href="javascript:;" onclick="tipsMe(this)" title="@Chatbot" data-at="@Chatbot"><img src="https://file.hu60.cn/avatar/-56.jpg" class="avatar smallava" data-uid="-56" /></a>
+            <a href="javascript:;" onclick="tipsMe(this)" title="@GPTbot" data-at="@GPTbot"><img src="https://file.hu60.cn/avatar/-57.jpg" class="avatar smallava" data-uid="-57" /></a>
         `
         if(chatForm) {
             widgetForm.insertBefore(robotList, chatForm)

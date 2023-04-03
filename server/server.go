@@ -14,7 +14,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/gorilla/websocket"
-	"github.com/rkonfj/hu60bot/convo"
 	"github.com/rkonfj/hu60bot/pkg/hu60"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/exp/slices"
@@ -25,7 +24,6 @@ type WebsocketManager struct {
 	hu60Client             *hu60.Client
 	connMap                map[int][]*websocket.Conn
 	connMapUpdateLock      sync.Mutex
-	cm                     *convo.ConversationManager
 	options                ServerOptions
 	depOkSig               chan int
 	broadcastEventChan     chan BotEvent
@@ -77,7 +75,7 @@ type ChatResponse struct {
 	Response        string `json:"response"`
 }
 
-func NewWebsocketManager(opts ServerOptions, cm *convo.ConversationManager) *WebsocketManager {
+func NewWebsocketManager(opts ServerOptions) *WebsocketManager {
 	return &WebsocketManager{
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
@@ -91,7 +89,6 @@ func NewWebsocketManager(opts ServerOptions, cm *convo.ConversationManager) *Web
 		}),
 		connMap:                make(map[int][]*websocket.Conn),
 		connMapUpdateLock:      sync.Mutex{},
-		cm:                     cm,
 		options:                opts,
 		depOkSig:               make(chan int),
 		broadcastEventChan:     make(chan BotEvent, 1024),

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -19,8 +18,6 @@ func init() {
 	startTime = time.Now()
 
 	actions["ls"] = listActionsAction
-	actions["chat"] = chatAction
-	actions["rmconvo"] = removeConvoAction
 	actions["ping"] = pingAction
 	actions["lsol"] = listOnlineUserAction
 	actions["procinf"] = processInfoAction
@@ -48,31 +45,6 @@ func listActionsAction(wm *WebsocketManager, ws *websocket.Conn, cmd BotCmd, uid
 		actionNames = append(actionNames, k)
 	}
 	ws.WriteJSON(BotEvent{Event: cmd.Action, Data: actionNames})
-}
-
-func chatAction(wm *WebsocketManager, ws *websocket.Conn, cmd BotCmd, uid int) {
-	conversationKey := fmt.Sprintf("%d", uid)
-	if d, ok := cmd.Data.(string); ok {
-		responseText, newConversation, err := wm.cm.Ask(d, conversationKey)
-		cr := ChatResponse{
-			NewConversation: newConversation,
-			Response:        responseText,
-		}
-		if err != nil {
-			cr = ChatResponse{
-				NewConversation: true,
-				Response:        err.Error(),
-			}
-		}
-		ws.WriteJSON(BotEvent{Event: cmd.Action, Data: cr})
-	}
-}
-
-// 清除 AI 会话
-func removeConvoAction(wm *WebsocketManager, ws *websocket.Conn, cmd BotCmd, uid int) {
-	conversationKey := fmt.Sprintf("%d", uid)
-	wm.cm.MarkExpired(conversationKey)
-	ws.WriteJSON(BotEvent{Event: cmd.Action, Data: "ok"})
 }
 
 func pingAction(wm *WebsocketManager, ws *websocket.Conn, cmd BotCmd, uid int) {

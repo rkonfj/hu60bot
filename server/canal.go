@@ -1,12 +1,10 @@
 package server
 
 import (
-	"encoding/json"
 	"strconv"
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/rkonfj/hu60bot/pkg/hu60"
 	"github.com/sirupsen/logrus"
 	"github.com/withlin/canal-go/client"
 	pbe "github.com/withlin/canal-go/protocol/entry"
@@ -35,7 +33,6 @@ func (m *CanalManager) Run() error {
 	}
 	logrus.Info("bot watching db event now")
 	m.wsm.OnCanalStartSucceed()
-	m.wsm.cm.OnCanalStartSucceed()
 	for {
 
 		message, err := m.connector.Get(100, nil, nil)
@@ -50,20 +47,6 @@ func (m *CanalManager) Run() error {
 		}
 		processHu60Msg(message.Entries, func(msg *Hu60Msg) {
 			m.wsm.Push(msg)
-			var c []hu60.MsgContent
-			err = json.Unmarshal([]byte(msg.Content), &c)
-			if err != nil {
-				logrus.Error("invalid hu60 msg content format: ", err)
-				return
-			}
-			m.wsm.cm.OnHu60Msg(hu60.Msg{
-				ID:      msg.ID,
-				ByUID:   msg.ByUID,
-				ToUID:   msg.ToUID,
-				Type:    msg.Type,
-				Read:    msg.Read,
-				Content: c,
-			})
 		})
 	}
 }

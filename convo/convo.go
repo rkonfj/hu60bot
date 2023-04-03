@@ -102,6 +102,7 @@ func (cm *ConversationManager) Run() {
 	cm.botUid = resp.Uid
 	cm.botReadyTask.Done()
 	cm.processMissedMsgs()
+	cm.startMsgsFetcher()
 	for msg := range cm.botMsgChan {
 		logrus.Debug("watched msg: ", msg)
 		if msg.Content[0].Type != "atMsg" {
@@ -122,7 +123,7 @@ func (cm *ConversationManager) Run() {
 	}
 }
 
-func (cm *ConversationManager) OnCanalStartFailed() {
+func (cm *ConversationManager) startMsgsFetcher() {
 	go func() {
 		// websocket
 		wsurl, err := url.Parse(cm.options.Hu60WSURL)
@@ -143,11 +144,6 @@ func (cm *ConversationManager) OnCanalStartFailed() {
 			cm.botMsgChan <- msg
 		})
 	}()
-}
-
-func (cm *ConversationManager) OnCanalStartSucceed() {
-	cm.startTheMarkMsgReadTask()
-	logrus.Infof("bot watching for chat now. conversation window is %s", cm.options.ConversationWindow.String())
 }
 
 func (cm *ConversationManager) processMissedMsgs() {

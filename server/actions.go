@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -14,6 +15,8 @@ var (
 	startTime time.Time
 )
 
+var buildinActions []string
+
 func init() {
 	startTime = time.Now()
 
@@ -25,15 +28,28 @@ func init() {
 	actions["sub"] = subscribeEventAction
 	actions["lsunsub"] = listUnsubscribedEventsAction
 
+	actions["regapi"] = registerRobotApiAction
+	actions["lsapi"] = listRobotApiAction
+	actions["resp"] = robotApiRespAction
+
+	for k := range actions {
+		buildinActions = append(buildinActions, k)
+	}
 }
 
 type ProcessInfo struct {
 	StartedDuration string `json:"started"`
 }
 
-type ActionDescription struct {
-	Name string
-	Desc string
+type RobotApiData struct {
+	Uid    int    `json:"uid"`
+	Action string `json:"action"`
+	Data   any    `json:"data"`
+}
+
+type RobotApiData1 struct {
+	Bot  int `json:"bot"`
+	Data any `json:"data"`
 }
 
 func listActionsAction(wm *WebsocketManager, ws *websocket.Conn, cmd BotCmd, uid int) {
@@ -124,4 +140,96 @@ func subscribeEventAction(wm *WebsocketManager, ws *websocket.Conn, cmd BotCmd, 
 
 func listUnsubscribedEventsAction(wm *WebsocketManager, ws *websocket.Conn, cmd BotCmd, uid int) {
 	ws.WriteJSON(BotEvent{Event: cmd.Action, Data: wm.unsubscribedEvents[uid]})
+}
+
+func registerRobotApiAction(wm *WebsocketManager, ws *websocket.Conn, cmd BotCmd, uid int) {
+	wm.robotActionHubLock.Lock()
+	defer wm.robotActionHubLock.Unlock()
+	if apis, ok := cmd.Data.([]any); ok {
+		if _, ok := wm.robotActionHub[uid]; !ok {
+			wm.robotActionHub[uid] = []string{}
+		}
+		for _, api := range apis {
+			if apiStr, ok := api.(string); ok {
+				if slices.Contains(wm.robotActionHub[uid], apiStr) {
+					continue
+				}
+				if slices.Contains(buildinActions, apiStr) {
+					ws.WriteJSON(BotEvent{Event: "error", Data: fmt.Sprintf("%s already exists. skiped", apiStr)})
+					continue
+				}
+				wm.robotActionHub[uid] = append(wm.robotActionHub[uid], apiStr)
+				actions[apiStr] = robotApiGenericAction
+				continue
+			}
+			ws.WriteJSON(BotEvent{Event: "error", Data: "invalid data format"})
+			return
+		}
+		ws.WriteJSON(BotEvent{Event: cmd.Action, Data: "ok"})
+		return
+	}
+	ws.WriteJSON(BotEvent{Event: "error", Data: "invalid data format"})
+}
+
+func listRobotApiAction(wm *WebsocketManager, ws *websocket.Conn, cmd BotCmd, uid int) {
+	ws.WriteJSON(BotEvent{Event: cmd.Action, Data: wm.robotActionHub})
+}
+
+func robotApiGenericAction(wm *WebsocketManager, ws *websocket.Conn, cmd BotCmd, uid int) {
+	if data, ok := cmd.Data.(map[string]any); ok {
+		var (
+			botAny any
+			botUid float64
+		)
+		if botAny, ok = data["bot"]; !ok {
+			ws.WriteJSON(BotEvent{Event: "error", Data: "data.bot not found"})
+			return
+		}
+		if botUid, ok = botAny.(float64); !ok {
+			ws.WriteJSON(BotEvent{Event: "error", Data: "invalid data.bot format"})
+			return
+		}
+		req := BotEvent{Event: "req", Data: RobotApiData{Uid: uid, Action: cmd.Action, Data: data["data"]}}
+		wm.userEventChan <- UserBotEvent{Uid: int(botUid), Event: req}
+		return
+	}
+	ws.WriteJSON(BotEvent{Event: "error", Data: "invalid data format"})
+}
+
+func robotApiRespAction(wm *WebsocketManager, ws *websocket.Conn, cmd BotCmd, uid int) {
+	if data, ok := cmd.Data.(map[string]any); ok {
+		var (
+			clientUidAny any
+			actionAny    any
+			botDataAny   any
+			clientUid    float64
+			action       string
+		)
+		if clientUidAny, ok = data["uid"]; !ok {
+			ws.WriteJSON(BotEvent{Event: "error", Data: "data.uid not found"})
+			return
+		}
+		if actionAny, ok = data["action"]; !ok {
+			ws.WriteJSON(BotEvent{Event: "error", Data: "data.action not found"})
+			return
+		}
+		if botDataAny, ok = data["data"]; !ok {
+			ws.WriteJSON(BotEvent{Event: "error", Data: "data.data not found"})
+			return
+		}
+
+		if clientUid, ok = clientUidAny.(float64); !ok {
+			ws.WriteJSON(BotEvent{Event: "error", Data: "invalid data.uid format"})
+			return
+		}
+
+		if action, ok = actionAny.(string); !ok {
+			ws.WriteJSON(BotEvent{Event: "error", Data: "invalid data.action format"})
+			return
+		}
+		resp := BotEvent{Event: action, Data: RobotApiData1{Bot: int(uid), Data: botDataAny}}
+		wm.userEventChan <- UserBotEvent{Uid: int(clientUid), Event: resp}
+		return
+	}
+	ws.WriteJSON(BotEvent{Event: "error", Data: "invalid data format"})
 }

@@ -31,6 +31,8 @@ type WebsocketManager struct {
 	userEventChan          chan UserBotEvent
 	unsubscribedEvents     map[int][]string
 	unsubscribedEventsLock sync.Mutex
+	robotActionHub         map[int][]string
+	robotActionHubLock     sync.Mutex
 }
 
 type Hu60Msg struct {
@@ -96,6 +98,8 @@ func NewWebsocketManager(opts ServerOptions) *WebsocketManager {
 		userEventChan:          make(chan UserBotEvent, 1024),
 		unsubscribedEvents:     make(map[int][]string),
 		unsubscribedEventsLock: sync.Mutex{},
+		robotActionHub:         make(map[int][]string),
+		robotActionHubLock:     sync.Mutex{},
 	}
 }
 

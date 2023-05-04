@@ -14,7 +14,7 @@ Flags:
       --hu60api string               hu60wap6's api url (default "https://hu60.cn")
   -p, --hu60pass string              robot password for login hu60wap6
   -u, --hu60user string              robot username for login hu60wap6
-      --hu60ws string                hu60wap6's websocket endpoint url (default "wss://hu60.cn/ws/msg")
+      --hu60ws string                hu60wap6's websocket endpoint url (default "<hu60api>/ws/msg")
       --log-level string             logging level. example: error, warn, info, debug ... (default "info")
       --openai-api string            openai's api url with version (default "https://api.openai.com/v1")
       --openai-model string          id of the openai model to use. https://platform.openai.com/docs/models/overview (default "gpt-3.5-turbo")

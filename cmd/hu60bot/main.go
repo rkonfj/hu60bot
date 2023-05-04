@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/rkonfj/hu60bot/convo"
@@ -22,7 +24,7 @@ func main() {
 	cmd.Flags().String("log-level", "info", "logging level. example: error, warn, info, debug ...")
 
 	cmd.Flags().String("hu60api", "https://hu60.cn", "hu60wap6's api url")
-	cmd.Flags().String("hu60ws", "wss://hu60.cn/ws/msg", "hu60wap6's websocket endpoint url")
+	cmd.Flags().String("hu60ws", "", "hu60wap6's websocket endpoint url (default \"<hu60api>/ws/msg\")")
 	cmd.Flags().StringP("hu60user", "u", "", "robot username for login hu60wap6")
 	cmd.Flags().StringP("hu60pass", "p", "", "robot password for login hu60wap6")
 
@@ -86,6 +88,14 @@ func processConversationOptions(cmd *cobra.Command) (options convo.ConversationO
 	options.Hu60WSURL, err = cmd.Flags().GetString("hu60ws")
 	if err != nil {
 		return
+	}
+	if options.Hu60WSURL == "" {
+		var u *url.URL
+		u, err = url.ParseRequestURI(options.Hu60APIURL)
+		if err != nil {
+			return
+		}
+		options.Hu60WSURL = fmt.Sprintf("wss://%s/ws/msg", u.Host)
 	}
 
 	options.OpenaiToken, err = cmd.Flags().GetString("openai-token")
